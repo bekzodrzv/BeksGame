@@ -43,11 +43,11 @@ let timer, timeLeft = 10;
 
 let teamCount = 0;
 let teamsData = [];
-let gameHistory = JSON.parse(localStorage.getItem("gameHistory")) || [];
+
 
 let preparedQuestions = null; // topicdan kelgan savollar
 let gameInProgress = false;
-
+let gameHistory = [];
 
 
 
@@ -60,32 +60,55 @@ let gameInProgress = false;
 let userTopics = [];
 let currentUserTopicId = null;
 
-/* -------- LOCAL STORAGE -------- */
-function saveTopicsToLocal() {
-  localStorage.setItem("userTopics", JSON.stringify(userTopics));
+// LocalStorage key
+function getUserTopicsLSKey() {
+  return "jeopardyTopics_" + currentUserUid;
 }
 
-function loadTopicsFromLocal() {
-  const data = localStorage.getItem("userTopics");
-  if (data) {
-    try {
-      userTopics = JSON.parse(data);
-    } catch (e) {
-      userTopics = [];
-    }
+// LocalStorage save
+function saveTopicsToLocal() {
+  localStorage.setItem(getUserTopicsLSKey(), JSON.stringify(userTopics));
+}
+
+// Firebase save
+async function saveTopicsToFirebase() {
+  if (!currentUserUid || !db) return;
+  try {
+    await setDoc(doc(db, "userTopics", currentUserUid), { topics: userTopics });
+    console.log("Topics Firebase-ga saqlandi ✅");
+  } catch (e) {
+    console.error("Topics Firebase-ga saqlashda xato:", e);
   }
 }
 
-/* -------- FIREBASE (optional) -------- */
-// db va currentUser mavjud bo‘lishi shart
-async function saveTopicsToFirebase() {
-  if (!window.currentUser || !window.db) return;
-  await setDoc(doc(db, "topics", currentUser.uid), {
-    topics: userTopics
-  });
+// Load topics (localStorage + Firebase fallback)
+async function loadTopics() {
+  // 1️⃣ LocalStorage
+  const localData = localStorage.getItem(getUserTopicsLSKey());
+  if (localData) {
+    try { userTopics = JSON.parse(localData); } 
+    catch { userTopics = []; }
+    renderUserTopics();
+  }
+
+  // 2️⃣ Firebase fallback
+  if (!currentUserUid || !db) return;
+  try {
+    const snap = await getDoc(doc(db, "userTopics", currentUserUid));
+    if (snap.exists()) {
+      const data = snap.data();
+      if (JSON.stringify(data.topics) !== JSON.stringify(userTopics)) {
+        userTopics = data.topics || [];
+        saveTopicsToLocal();
+        renderUserTopics();
+      }
+    }
+  } catch (err) {
+    console.error("Firebase topics yuklashda xato:", err);
+  }
 }
 
-/* -------- RENDER PANEL -------- */
+// Render topics panel
 function renderUserTopics() {
   const container = document.getElementById("userTopicPanel");
   if (!container) return;
@@ -98,31 +121,27 @@ function renderUserTopics() {
     div.id = topic.id;
 
     const totalQs = topic.questions.reduce(
-      (sum, cat) => sum + cat.length, 0
+      (sum, cat) => sum + (Array.isArray(cat) ? cat.length : 0),
+      0
     );
-
     div.innerHTML = `
       <strong>${topic.title}</strong>
       <span>${totalQs} ta savol</span>
-
       <div class="topicActions">
         <button class="editBtn">✏️</button>
         <button class="deleteBtn">🗑</button>
       </div>
     `;
 
-    // 🔹 BOSSA – O‘YNASH
     div.onclick = () => selectUserTopic(topic.id);
 
-    // 🔹 Tahrirlash
-    div.querySelector(".editBtn").onclick = (e) => {
-      e.stopPropagation(); // o‘yin boshlanmasin
+    div.querySelector(".editBtn").onclick = e => {
+      e.stopPropagation();
       editUserTopicTitle(topic.id);
     };
 
-    // 🔹 O‘chirish
-    div.querySelector(".deleteBtn").onclick = (e) => {
-      e.stopPropagation(); // o‘yin boshlanmasin
+    div.querySelector(".deleteBtn").onclick = async e => {
+      e.stopPropagation();
       deleteUserTopic(topic.id);
     };
 
@@ -130,9 +149,8 @@ function renderUserTopics() {
   });
 }
 
-
-/* -------- ADD TOPIC -------- */
-function addUserTopic() {
+// Add new topic
+async function addUserTopic() {
   const input = document.getElementById("newUserTopicTitle");
   const title = input.value.trim();
   if (!title) return alert("Mavzu nomini kiriting!");
@@ -148,11 +166,11 @@ function addUserTopic() {
   input.value = "";
 
   saveTopicsToLocal();
-  saveTopicsToFirebase();
+  await saveTopicsToFirebase();
   renderUserTopics();
 }
 
-/* -------- SELECT TOPIC (PLAY) -------- */
+// Select topic
 function selectUserTopic(topicId) {
   const topic = userTopics.find(t => t.id === topicId);
   if (!topic) return;
@@ -160,25 +178,28 @@ function selectUserTopic(topicId) {
   currentUserTopicId = topicId;
   localStorage.setItem("lastTopicId", topicId);
 
-  // 🔥 MUHIM: questions ni TO‘LIQ almashtiramiz
+  // Global questions
   questions = JSON.parse(JSON.stringify(topic.questions));
-
-  // 🔥 ADMIN va BOARD shu questions bilan ishlaydi
   renderBoard();
-
-  if (typeof loadQuestionsForEdit === "function") {
-    loadQuestionsForEdit();
-  }
-
-  gameInProgress = false;
+  if (typeof loadQuestionsForEdit === "function") loadQuestionsForEdit();
 }
 
-/* -------- IMPORT EXCEL -------- */
-function importExcelForUserTopic() {
-  if (!currentUserTopicId) {
-    return alert("Avval mavzuni bosing!");
-  }
+// Restore last topic
+function restoreLastTopic() {
+  const lastId = localStorage.getItem("lastTopicId");
+  if (!lastId || userTopics.length === 0) return;
 
+  const topic = userTopics.find(t => t.id === lastId);
+  if (!topic) return;
+
+  currentUserTopicId = topic.id;
+  questions = JSON.parse(JSON.stringify(topic.questions));
+  renderBoard();
+}
+
+// Import Excel for selected topic
+async function importExcelForUserTopic() {
+  if (!currentUserTopicId) return alert("Avval topic tanlang!");
   const input = document.getElementById("userTopicExcelInput");
   const file = input.files[0];
   if (!file) return alert("Excel fayl tanlanmadi!");
@@ -187,7 +208,7 @@ function importExcelForUserTopic() {
   if (!topic) return;
 
   const reader = new FileReader();
-  reader.onload = function (e) {
+  reader.onload = async function (e) {
     const data = new Uint8Array(e.target.result);
     const workbook = XLSX.read(data, { type: "array" });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -195,7 +216,6 @@ function importExcelForUserTopic() {
 
     topic.questions = [[], [], [], [], []];
     let index = 0;
-
     rows.forEach(r => {
       const q = r.Question || r.question || r.QUESTION;
       const a = r.Answer || r.answer || r.ANSWER;
@@ -208,46 +228,35 @@ function importExcelForUserTopic() {
       }
       index++;
 
-      topic.questions[cat].push({
-        q: q.trim(),
-        a: a.trim()
-      });
+      topic.questions[cat].push({ q: q.trim(), a: a.trim() });
     });
 
-    // agar shu topic ochiq bo‘lsa — darrov o‘yin yangilanadi
-    window.questions = JSON.parse(JSON.stringify(topic.questions));
-    if (typeof renderBoard === "function") renderBoard();
-    if (typeof loadQuestionsForEdit === "function") {
-      loadQuestionsForEdit();
-    }
+    questions = JSON.parse(JSON.stringify(topic.questions));
 
     saveTopicsToLocal();
-    saveTopicsToFirebase();
+    await saveTopicsToFirebase();
     renderUserTopics();
+    renderBoard();
+    if (typeof loadQuestionsForEdit === "function") loadQuestionsForEdit();
 
     alert("Excel muvaffaqiyatli yuklandi!");
   };
-
   reader.readAsArrayBuffer(file);
 }
 
-/* -------- DELETE TOPIC -------- */
-function deleteUserTopic(topicId) {
+// Delete topic
+async function deleteUserTopic(topicId) {
   if (!confirm("Mavzu o‘chirilsinmi?")) return;
-
   userTopics = userTopics.filter(t => t.id !== topicId);
-
-  if (currentUserTopicId === topicId) {
-    currentUserTopicId = null;
-  }
+  if (currentUserTopicId === topicId) currentUserTopicId = null;
 
   saveTopicsToLocal();
-  saveTopicsToFirebase();
+  await saveTopicsToFirebase();
   renderUserTopics();
 }
 
-/* -------- EDIT TITLE -------- */
-function editUserTopicTitle(topicId) {
+// Edit topic title
+async function editUserTopicTitle(topicId) {
   const topic = userTopics.find(t => t.id === topicId);
   if (!topic) return;
 
@@ -256,23 +265,29 @@ function editUserTopicTitle(topicId) {
 
   topic.title = title.trim();
   saveTopicsToLocal();
-  saveTopicsToFirebase();
+  await saveTopicsToFirebase();
   renderUserTopics();
 }
 
-/* -------- RESTORE LAST TOPIC -------- */
-function restoreLastTopic() {
-  const lastId = localStorage.getItem("lastTopicId");
-  if (!lastId) return;
+/* =====================
+   INIT ON LOAD
+===================== */
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    window.location.href = "index.html";
+    return;
+  }
 
-  const topic = userTopics.find(t => t.id === lastId);
-  if (!topic) return;
+  currentUserUid = user.uid;
 
-  currentUserTopicId = topic.id;
-  window.questions = JSON.parse(JSON.stringify(topic.questions));
+  await loadTopics();
+  renderUserTopics();
+  restoreLastTopic();
+  await loadGameHistory();
 
-  if (typeof renderBoard === "function") renderBoard();
-}
+  renderBoard();
+});
+
 
 /* -------- INIT -------- */
 window.addEventListener("load", () => {
@@ -600,49 +615,67 @@ async function endGame(sortedTeams) {
   showWinnerModal(sortedTeams);
 }
 
-// =====================
-// 2️⃣ Natijani localStorage + Firebase ga saqlash
-// =====================
+/* =====================
+   SAVE GAME HISTORY
+===================== */
+async function saveGameHistory() {
+  const key = getUserHistoryLSKey();
+  localStorage.setItem(key, JSON.stringify(gameHistory));
+
+  if (!currentUserUid || !db) return;
+  try {
+    await setDoc(doc(db, "gameHistory", currentUserUid), { history: gameHistory });
+    // Firebase saqlangandan keyin darhol UI yangilanadi
+    renderGameHistory();
+  } catch (err) {
+    console.error("Firebase history saqlashda xato:", err);
+  }
+}
+
+/* =====================
+   SAVE GAME RESULT
+===================== */
 async function saveGameResult(sortedTeams) {
+  if (!currentUserUid || !db) return;
+
   const result = {
     date: new Date().toISOString(),
     teams: sortedTeams.map(t => ({ name: t.name, score: t.score }))
   };
 
-  const key = getHistoryLSKey();
+  const key = "gameHistory_" + currentUserUid;
 
   // 🔹 LocalStorage
   let history = JSON.parse(localStorage.getItem(key)) || [];
   history.push(result);
   localStorage.setItem(key, JSON.stringify(history));
 
-  // 🔹 gameHistory state ham yangilansin
-  gameHistory = [...history];
+  // 🔹 Firebase
+  try {
+    await setDoc(doc(db, "gameHistory", currentUserUid), { history }, { merge: true });
+    console.log("Game history Firebase-ga saqlandi ✅");
+  } catch (e) {
+    console.error("Game history Firebase-ga saqlashda xato:", e);
+  }
 
-  // 🔹 Firebase saqlash
-  await saveGameResultFirebase(sortedTeams);
-
-  // 🔹 UI darhol yangilansin
-  renderGameHistory();
+  renderGameHistory();  // 🔹 UI yangilanadi
 }
 
 
-// =====================
-// 3️⃣ History UI render
-// =====================
+
 async function renderGameHistory() {
   const historyBox = document.getElementById("historyList");
   if (!historyBox) return;
 
-  const key = getHistoryLSKey();
-  let gameHistory = JSON.parse(localStorage.getItem(key)) || [];
+  let gameHistory = JSON.parse(localStorage.getItem("gameHistory_" + currentUserUid)) || [];
 
-  // Agar localStorage bo‘sh bo‘lsa → Firebase fallback
-  if (gameHistory.length === 0) {
+  // 🔹 Agar localStorage bo‘sh bo‘lsa → Firebase fallback
+  if (gameHistory.length === 0 && currentUserUid && db) {
     try {
-      gameHistory = await getGameHistoryFirebase();
-      if (gameHistory.length > 0) {
-        localStorage.setItem(key, JSON.stringify(gameHistory));
+      const docSnap = await getDoc(doc(db, "gameHistory", currentUserUid));
+      if (docSnap.exists()) {
+        gameHistory = docSnap.data().history || [];
+        localStorage.setItem("gameHistory_" + currentUserUid, JSON.stringify(gameHistory));
       }
     } catch (err) {
       console.error("Firebase’dan tarixni olishda xato:", err);
@@ -650,33 +683,65 @@ async function renderGameHistory() {
   }
 
   historyBox.innerHTML = "";
-
   gameHistory.forEach((game, index) => {
     const div = document.createElement("div");
     div.className = "historyItem";
-    div.style.position = "relative";
-
     div.innerHTML = `
       <strong>${index + 1}-o‘yin</strong>
-      <span class="date">${new Date(game.date).toLocaleDateString()}</span>
-      <span class="time">${new Date(game.date).toLocaleTimeString()}</span>
+      <span>${new Date(game.date).toLocaleDateString()}</span>
+      <span>${new Date(game.date).toLocaleTimeString()}</span>
       ${game.teams.map(t => `<div class="teamScore">${t.name}: ${t.score}</div>`).join('')}
     `;
-
-    // Close button
-    const closeBtn = document.createElement("button");
-    closeBtn.className = "closeBtn";
-    closeBtn.innerText = "×";
-    closeBtn.onclick = () => {
-      gameHistory.splice(index, 1);
-      localStorage.setItem(key, JSON.stringify(gameHistory));
-      renderGameHistory();
-    };
-    div.appendChild(closeBtn);
-
     historyBox.appendChild(div);
   });
 }
+window.addEventListener("load", async () => {
+  if (!currentUserUid) return;
+
+  // 1️⃣ Firebase va localStorage dan topiclarni yuklash
+  await loadTopics();  
+
+  // 2️⃣ UI yangilash
+  renderUserTopics();
+
+  // 3️⃣ Oxirgi tanlangan topicni restore qilish
+  restoreLastTopic();
+
+  // 4️⃣ Game history render
+  await renderGameHistory();
+});
+
+
+
+/* =====================
+   LOAD GAME HISTORY
+===================== */
+async function loadGameHistory() {
+  const key = getUserHistoryLSKey();
+  const localData = localStorage.getItem(key);
+  if (localData) {
+    try { gameHistory = JSON.parse(localData); } 
+    catch { gameHistory = []; }
+    renderGameHistory();
+  }
+
+  // Firebase fallback
+  if (!currentUserUid || !db) return;
+  try {
+    const snap = await getDoc(doc(db, "gameHistory", currentUserUid));
+    if (snap.exists()) {
+      const data = snap.data();
+      if (JSON.stringify(data.history) !== JSON.stringify(gameHistory)) {
+        gameHistory = data.history || [];
+        localStorage.setItem(key, JSON.stringify(gameHistory));
+        renderGameHistory();
+      }
+    }
+  } catch (err) {
+    console.error("Firebase’dan history olishda xato:", err);
+  }
+}
+
 
 // =====================
 // 4️⃣ Winner modal + confetti
@@ -867,22 +932,30 @@ toggleBtn.addEventListener("click", () => {
   }
 });
 
-
-function addQuestion() {
+async function addQuestion() {
   const q = document.getElementById("newQuestion").value.trim();
   const a = document.getElementById("newAnswer").value.trim();
   const cat = parseInt(document.getElementById("catSelect").value);
 
   if (!q || !a) return alert("Savol va javobni kiriting!");
-  
-  questions[cat].push({ q, a });
 
+  questions[cat].push({ q, a });
   renderBoard();
   loadQuestionsForEdit();
+
+  const topic = userTopics.find(t => t.id === currentUserTopicId);
+  if (topic) {
+    topic.questions = JSON.parse(JSON.stringify(questions));
+    saveTopicsToLocal();
+    await saveTopicsToFirebase();  // 🔹 Firebase-ga push
+    renderUserTopics();             // 🔹 savollar soni yangilanadi
+  }
 
   document.getElementById("newQuestion").value = "";
   document.getElementById("newAnswer").value = "";
 }
+
+
 
 
 
@@ -1039,36 +1112,11 @@ function importExcel() {
 
 
 
-/* =====================
-   AUTH
-===================== */
-onAuthStateChanged(auth, user => {
-  if (!user) {
-    window.location.href = "index.html";
-    return;
-  }
-
-  currentUserUid = user.uid;
-
-  loadQuestionsFromLocal();
-  renderBoard();
-  renderTopics();
-
-  // O'yin tarixini yuklash
-  const key = getHistoryLSKey();
-  if (key) {
-    gameHistory = JSON.parse(localStorage.getItem(key)) || [];
-    renderGameHistory();
-  }
-});
 
 
-function getHistoryLSKey() {
-  if (!currentUserUid) return null;
+function getUserHistoryLSKey() {
   return "jeopardyHistory_" + currentUserUid;
 }
-
-
 
 
 /* =====================
