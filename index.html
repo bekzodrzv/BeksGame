@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beks Game Login</title>
+<link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+<div class="login-container">
+    <h1>Beks Game</h1>
+
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+
+    <div class="btnRow">
+        <button class="bigBtn" id="loginBtn">Login</button>
+        <button class="bigBtn" id="registerBtn">Register</button>
+    </div>
+
+    <p id="auth-msg"></p>
+</div>
+
+<script type="module" src="firebase.js"></script>
+<script type="module" src="auth.js"></script>
+</body>
+</html>

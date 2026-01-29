@@ -1,0 +1,23 @@
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyCjb_SxZGmzVQdrY9bCceyEP4jYVTAq8Ps",
+    authDomain: "beks-game.firebaseapp.com",
+    projectId: "beks-game",
+    storageBucket: "beks-game.firebasestorage.app",
+    messagingSenderId: "101120658989",
+    appId: "1:101120658989:web:513fd1ef29a003605a72a4",
+    measurementId: "G-TJHYR914SQ"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>

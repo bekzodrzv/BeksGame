@@ -1,0 +1,87 @@
+body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center; /* gorizontal markaz */
+    align-items: center;     /* vertikal markaz */
+    font-family: Arial, sans-serif;
+
+     /* 🎨 gradient o‘rniga rasm */
+    background-image: url('topfast.jpg'); /* rasm manzili */
+    background-size: cover;      /* ekranni to‘ldiradi */
+    background-position: center; /* markazda turadi */
+    background-repeat: no-repeat; /* takrorlanmaydi */
+}
+
+.login-container {
+    width: 50%;
+    max-width: 500px;
+    padding: 60px;
+    padding-bottom: 40px;
+    border-radius: 12px;
+    background: white;
+    box-sizing: border-box;
+}
+
+.login-container h1 {
+    margin-bottom: 30px;
+    font-size: 42px; /* kattaroq qildim */
+}
+
+.login-container input {
+    width: 100%;
+    padding: 12px; /* input biroz kattaroq bo‘lsin */
+    font-size: 18px; /* harflar kattaroq */
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+    margin-top: 5px;
+    margin-bottom: 20px;
+}
+
+.btnRow {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.bigBtn {
+    width: 50%;
+    display: block;
+    border: none;
+    background: linear-gradient(to right, #1345e6 0%, #ed239f 51%, #1345e6 100%);
+    background-size: 200% auto;
+    color: white;
+    padding: 14px 30px; /* kattaroq padding */
+    font-size: 18px; /* harflar kattaroq */
+    cursor: pointer;
+    border-radius: 5px;
+    text-align: center;
+}
+
+.bigBtn:hover {
+    background-position: right center;
+    transition: 0.5s;
+}
+
+/* 📱 Mobil */
+@media (max-width: 480px) {
+    .login-container {
+        padding: 30px 20px;
+    }
+
+    .login-container h1 {
+        font-size: 32px; /* mobil uchun biroz kichraytirildi */
+    }
+
+    .login-container input {
+        font-size: 20px; /* mobil uchun kattaroq */
+        padding: 16px;
+    }
+
+    .bigBtn {
+        font-size: 18px; /* mobil uchun kattaroq */
+        padding: 14px;
+    }
+}

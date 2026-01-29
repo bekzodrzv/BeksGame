@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="uz">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Beks Game</title>
+  <link rel="stylesheet" href="game.css">
+</head>
+
+
+<body>
+
+  <h1>
+  <span class="brand-main">Beks Game</span>
+  <span class="brand-sub">
+    Top <span class="brand-f">F</span>ast Education
+  </span>
+</h1>
+
+
+  <!-- Logout -->
+  <button class="bigBtn" id="logoutBtn">Chiqish</button>
+
+  <!-- Categories -->
+  <div class="categories">
+    <div>1</div>
+    <div>2</div>
+    <div>3</div>
+    <div>4</div>
+    <div>5</div>
+  </div>
+
+  <!-- Game board -->
+  <div class="board" id="board"></div>
+  <div id="bonusEffect" class="bonusEffect hidden">🔥 2X BONUS 🔥</div>
+  <audio id="bonusSound" src="bonus.mp3" preload="auto"></audio>
+
+
+  <!-- Question Modal -->
+  <div class="modal" id="modal">
+    <div class="modal-box">
+      <h2 id="qText"></h2>
+      <button class="bigBtn" onclick="showAnswer()">Javobni ko‘rsat</button>
+      <p id="aText" class="hidden"></p>
+      <div id="timer">10</div>
+      <audio id="tickSound" src="tick.mp3" preload="auto"></audio>
+      <button class="bigBtn" onclick="closeModal()">Yopish</button>
+    </div>
+  </div>
+
+<audio id="clickSound" src="click.mp3.wav"></audio>
+<audio id="winnerSound" src="cheer.mp3.wav"></audio>
+
+<label>Savol vaqti (sekund):</label>
+<input type="number" id="timerInput" value="10" min="5" max="60">
+<button onclick="applyTimer()">O‘rnatish</button>
+
+
+  <!-- Teams -->
+  <div class="teamAdd">
+    <input type="text" id="teamNameInput" placeholder="Team nomi">
+    <button class="bigBtn" onclick="addTeam()">Team qo‘shish</button>
+  </div>
+  <div class="teams" id="teams"></div>
+
+  <!-- TOPIC PANEL (MUSTAQIL) -->
+<div id="userTopicPanel"></div>
+
+<input type="text" id="newUserTopicTitle" placeholder="Yangi topic nomi">
+<button onclick="addUserTopic()">Qo‘shish</button>
+
+<input type="file" id="userTopicExcelInput">
+<button onclick="importExcelForUserTopic()">Excel’dan yuklash</button>
+
+<div id="board"></div>
+
+
+  
+  <!-- GAME HISTORY -->
+<div id="gameHistory" class="historyBox">
+  <h2>📜 O‘yinlar tarixi</h2>
+  <div id="historyList"></div>
+</div>
+
+
+  <!-- Admin Panel -->
+   
+  <button id="toggleAdminBtn">Admin panelni ko‘rsat</button>
+
+<div id="adminPanel">
+  
+    <h2>Tahrirlash</h2>
+    <!-- Savol qo‘shish -->
+    <div class="inputBtnRow">
+      <input type="text" id="newQuestion" placeholder="Yangi savol">
+      <input type="text" id="newAnswer" placeholder="Javob">
+      <select id="catSelect">
+        <option value="0">1</option>
+        <option value="1">2</option>
+        <option value="2">3</option>
+        <option value="3">4</option>
+        <option value="4">5</option>
+      </select>
+      <button class="bigBtn" onclick="addQuestion()">Savol qo'shish</button>
+      <button class="bigBtn" onclick="shuffleQuestionsByButton()">🔀 Savolarni Aralashtrish</button>
+
+    </div>
+
+    <!-- Savol tahrir -->
+    
+    <select id="editCategory" onchange="loadQuestionsForEdit()">
+      <option value="">Kategoriya tanlang</option>
+      <option value="0">1</option>
+      <option value="1">2</option>
+      <option value="2">3</option>
+      <option value="3">4</option>
+      <option value="4">5</option>
+    </select>
+    <button class="bigBtn" onclick="deleteAllQuestions()">Barchasini o‘chirish</button>
+    <button class="bigBtn" onclick="deleteAllCategoriesQuestions()">Barcha kategoriyalarni o‘chirish</button>
+
+    <div id="editList"></div>
+    <button class="bigBtn" onclick="resetGame()">
+      🔄 Game reset
+    </button>
+    <input type="file" id="excelInput" accept=".xlsx,.csv">
+    <button class="bigBtn" onclick="importExcel()">Excel yuklash</button>
+  </div>
+
+  <!-- Winner Modal -->
+  <div id="winnerModal">
+    <div id="winnerText"></div>
+    <div id="restWinners"></div>
+    <canvas id="confetti"></canvas>
+  </div>
+
+  <!-- History -->
+  <div id="history"></div>
+
+  <!-- XLSX doim game.js DAN OLDIN -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script type="module" src="game.js"></script>
+
+  <!-- game.js MODULE -->
+
+</body>
+
+</html>
