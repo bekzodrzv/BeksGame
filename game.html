@@ -63,12 +63,6 @@
   <!-- TOPIC PANEL (MUSTAQIL) -->
 <div id="userTopicPanel"></div>
 
-<input type="text" id="newUserTopicTitle" placeholder="Yangi topic nomi">
-<button onclick="addUserTopic()">Qo‘shish</button>
-
-<input type="file" id="userTopicExcelInput">
-<button onclick="importExcelForUserTopic()">Excel’dan yuklash</button>
-
 <div id="board"></div>
 
 
@@ -79,50 +73,18 @@
   <div id="historyList"></div>
 </div>
 
+<input type="text" id="newUserTopicTitle" placeholder="Yangi topic nomi">
+<button onclick="addUserTopic()">Qo‘shish</button>
 
-  <!-- Admin Panel -->
-   
-  <button id="toggleAdminBtn">Admin panelni ko‘rsat</button>
+<input type="file" id="userTopicExcelInput">
+<button onclick="importExcelForUserTopic()">Excel’dan yuklash</button>
 
-<div id="adminPanel">
-  
-    <h2>Tahrirlash</h2>
-    <!-- Savol qo‘shish -->
-    <div class="inputBtnRow">
-      <input type="text" id="newQuestion" placeholder="Yangi savol">
-      <input type="text" id="newAnswer" placeholder="Javob">
-      <select id="catSelect">
-        <option value="0">1</option>
-        <option value="1">2</option>
-        <option value="2">3</option>
-        <option value="3">4</option>
-        <option value="4">5</option>
-      </select>
-      <button class="bigBtn" onclick="addQuestion()">Savol qo'shish</button>
-      <button class="bigBtn" onclick="shuffleQuestionsByButton()">🔀 Savolarni Aralashtrish</button>
 
-    </div>
+<label for="timerInput">Savol vaqti (sekund):</label>
+<input type="number" id="timerInput" min="1" max="300" value="10">
+<button onclick="updateTimer()">O‘zgartirish</button>
 
-    <!-- Savol tahrir -->
-    
-    <select id="editCategory" onchange="loadQuestionsForEdit()">
-      <option value="">Kategoriya tanlang</option>
-      <option value="0">1</option>
-      <option value="1">2</option>
-      <option value="2">3</option>
-      <option value="3">4</option>
-      <option value="4">5</option>
-    </select>
-    <button class="bigBtn" onclick="deleteAllQuestions()">Barchasini o‘chirish</button>
-    <button class="bigBtn" onclick="deleteAllCategoriesQuestions()">Barcha kategoriyalarni o‘chirish</button>
-
-    <div id="editList"></div>
-    <button class="bigBtn" onclick="resetGame()">
-      🔄 Game reset
-    </button>
-    <input type="file" id="excelInput" accept=".xlsx,.csv">
-    <button class="bigBtn" onclick="importExcel()">Excel yuklash</button>
-  </div>
+<button class="bigBtn" onclick="shuffleQuestionsByButton()">🔀 Savolarni Aralashtrish</button>
 
   <!-- Winner Modal -->
   <div id="winnerModal">

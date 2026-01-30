@@ -1,6 +1,6 @@
 import { auth, db } from "./firebase.js";
 import { signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { doc, setDoc, updateDoc, arrayUnion, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 /* =====================
    LOGOUT
@@ -9,27 +9,6 @@ document.getElementById("logoutBtn")?.addEventListener("click", () => {
   signOut(auth).then(() => window.location.href = "index.html");
 });
 
-/* =====================
-   DEFAULT SAVOLLAR
-===================== */
-const defaultQuestions = [
-  
-  [
-    { q: "오전 nimani bildiradi?", a: "Abetgacha" },
-    { q: "오후 nimani bildiradi?", a: "Tushdan keyin" },
-    { q: "자기 전 tarjimasi?", a: "Uyqudan oldin" },
-    { q: "아침 nimani bildiradi?", a: "Ertalab" },
-    { q: "저녁 nimani bildiradi?", a: "Kechki payt" }
-  ],
-  [
-    { q: "안녕히 주무세요 qachon?", a: "Yotishdan oldin" },
-    { q: "잘 자요 nimani bildiradi?", a: "Yaxshi dam ol" },
-    { q: "일 nimani bildiradi?", a: "Ish" },
-    { q: "점심 nimani bildiradi?", a: "Tushlik" },
-    { q: "저녁 nimani bildiradi?", a: "Kechki ovqat" }
-  ],
-  
-];
 
 /* =====================
    GLOBAL STATE
@@ -39,7 +18,7 @@ let currentUserUid = null;
 
 let currentCell = null;
 let currentValue = 0;
-let timer, timeLeft = 10;
+
 
 let teamCount = 0;
 let teamsData = [];
@@ -48,6 +27,8 @@ let teamsData = [];
 let preparedQuestions = null; // topicdan kelgan savollar
 let gameInProgress = false;
 let gameHistory = [];
+let userTimer = 10; // default 10 sekund, foydalanuvchi o‘zgartirishi mumkin
+let timer, timeLeft;
 
 
 
@@ -60,10 +41,6 @@ let gameHistory = [];
 let userTopics = [];
 let currentUserTopicId = null;
 
-// LocalStorage key
-function getUserTopicsLSKey() {
-  return "jeopardyTopics_" + currentUserUid;
-}
 
 // LocalStorage save
 function saveTopicsToLocal() {
@@ -82,31 +59,41 @@ async function saveTopicsToFirebase() {
 }
 
 // Load topics (localStorage + Firebase fallback)
-async function loadTopics() {
+function getUserTopicsLSKey() {
+  return "userTopics_" + currentUserUid;
+}
+
+async function loadTopicsSafe() {
+  let localTopics = [];
+
   // 1️⃣ LocalStorage
   const localData = localStorage.getItem(getUserTopicsLSKey());
   if (localData) {
-    try { userTopics = JSON.parse(localData); } 
-    catch { userTopics = []; }
-    renderUserTopics();
+    try {
+      localTopics = JSON.parse(localData);
+    } catch {
+      localTopics = [];
+    }
   }
 
-  // 2️⃣ Firebase fallback
-  if (!currentUserUid || !db) return;
+  userTopics = localTopics;
+
+  // 2️⃣ Firebase
   try {
     const snap = await getDoc(doc(db, "userTopics", currentUserUid));
     if (snap.exists()) {
-      const data = snap.data();
-      if (JSON.stringify(data.topics) !== JSON.stringify(userTopics)) {
-        userTopics = data.topics || [];
-        saveTopicsToLocal();
-        renderUserTopics();
+      const fbTopics = snap.data().topics;
+
+      if (Array.isArray(fbTopics) && fbTopics.length > 0) {
+        userTopics = fbTopics;
+        localStorage.setItem(getUserTopicsLSKey(), JSON.stringify(fbTopics));
       }
     }
-  } catch (err) {
-    console.error("Firebase topics yuklashda xato:", err);
+  } catch (e) {
+    console.error("Topic load error:", e);
   }
 }
+
 
 // Render topics panel
 function renderUserTopics() {
@@ -165,10 +152,17 @@ async function addUserTopic() {
   userTopics.push(topic);
   input.value = "";
 
+  // 1️⃣ Darhol UI yangilash
+  renderUserTopics();
+
+  // 2️⃣ Saqlash localStorage + Firebase
   saveTopicsToLocal();
   await saveTopicsToFirebase();
-  renderUserTopics();
+
+  alert("Mavzu qo‘shildi ✅");
 }
+
+
 
 // Select topic
 function selectUserTopic(topicId) {
@@ -280,21 +274,19 @@ onAuthStateChanged(auth, async (user) => {
 
   currentUserUid = user.uid;
 
-  await loadTopics();
+  await initUserData();
+});
+async function initUserData() {
+  await loadTopicsSafe();
   renderUserTopics();
   restoreLastTopic();
-  await loadGameHistory();
+
+  await loadGameHistorySafe();
+  renderGameHistory();
 
   renderBoard();
-});
+}
 
-
-/* -------- INIT -------- */
-window.addEventListener("load", () => {
-  loadTopicsFromLocal();
-  renderUserTopics();
-  restoreLastTopic();
-});
 
 /* -------- EXPORT -------- */
 window.addUserTopic = addUserTopic;
@@ -315,33 +307,10 @@ const winnerSound = document.getElementById("winnerSound");
    LOCAL STORAGE KEY
 ===================== */
 function getUserLSKey() {
-  return "jeopardyQuestions_" + currentUserUid;
+  return "gameHistory_" + currentUserUid;
 }
 
-/* =====================
-   LOAD / SAVE QUESTIONS
-===================== */
-function loadQuestionsFromLocal() {
-  const key = getUserLSKey();
-  const data = localStorage.getItem(key);
 
-  if (data) {
-    questions = JSON.parse(data);
-  } else {
-    questions = JSON.parse(JSON.stringify(defaultQuestions));
-    localStorage.setItem(key, JSON.stringify(questions));
-  }
-}
-
-async function saveQuestions() {
-  const key = getUserLSKey();
-  localStorage.setItem(key, JSON.stringify(questions));
-
-  for (let i = 0; i < questions.length; i++) {
-    const ref = doc(db, "userQuestions", currentUserUid + "_cat_" + i);
-    await setDoc(ref, { questions: questions[i] });
-  }
-}
 
 /* =====================
    BOARD
@@ -442,37 +411,9 @@ function closeModal() {
 }
 
 
-/* =====================
-   TIMER
-===================== */
 
-/*function startTimer() {
-  timeLeft = 10;
-  const timerEl = document.getElementById("timer");
-  const sound = document.getElementById("tickSound"); // HTML audio elementi
-
-  timerEl.innerText = timeLeft;
-
-  timer = setInterval(() => {
-    timeLeft--;
-    timerEl.innerText = timeLeft;
-
-    // Oxirgi 3 sekundda tick chaladi
-    if (timeLeft <= 3 && timeLeft > 0) {
-      sound.currentTime = 0; // audio qaytadan boshlash
-      sound.play();
-    }
-
-    // Vaqt tugaganda
-    if (timeLeft <= 0) {
-      clearInterval(timer);
-      timerEl.innerText = "Vaqt tugadi!";
-      showAnswer(); // javobni ko'rsatish
-    }
-  }, 1000);
-}*/
 function startTimer() {
-  timeLeft = 10;
+  timeLeft = userTimer; // foydalanuvchi tomonidan belgilangan vaqt
   const timerEl = document.getElementById("timer");
   const sound = document.getElementById("tickSound"); // HTML audio elementi
   timerEl.innerText = timeLeft;
@@ -482,14 +423,13 @@ function startTimer() {
     timeLeft--;
     timerEl.innerText = timeLeft;
 
-    // 🔥 FAQAT EFEKT (logika emas)
     timerEl.classList.remove("timer-animate");
-    void timerEl.offsetWidth; // animatsiyani qayta ishga tushirish
+    void timerEl.offsetWidth;
     timerEl.classList.add("timer-animate");
 
     if (timeLeft <= 3 && timeLeft > 0) {
       timerEl.classList.add("timer-last");
-      sound.currentTime = 0; // audio qaytadan boshlash
+      sound.currentTime = 0;
       sound.play()
     }
 
@@ -501,6 +441,15 @@ function startTimer() {
     }
   }, 1000);
 }
+
+function updateTimer() {
+  const input = document.getElementById("timerInput");
+  let val = parseInt(input.value);
+  if (isNaN(val) || val < 1) val = 10;
+  userTimer = val;
+  alert(`Savol vaqti ${userTimer} sekundga o‘zgartirildi!`);
+}
+window.updateTimer = updateTimer;
 
 
 
@@ -598,45 +547,16 @@ function declareWinner() {
 
 
 
-// 🔹 Flag: o‘yin natijasi faqat 1 marta saqlansin
-let gameSaved = false;
 
-// =====================
-// 1️⃣ O‘yin tugagach save qilish
-// =====================
-async function endGame(sortedTeams) {
-  // Natija faqat 1 marta saqlansin
-  if (!gameSaved) {
-    gameSaved = true;
-    await saveGameResult(sortedTeams);
-  }
-
-  // Winner modal ochish
-  showWinnerModal(sortedTeams);
-}
-
-/* =====================
-   SAVE GAME HISTORY
-===================== */
-async function saveGameHistory() {
-  const key = getUserHistoryLSKey();
-  localStorage.setItem(key, JSON.stringify(gameHistory));
-
-  if (!currentUserUid || !db) return;
-  try {
-    await setDoc(doc(db, "gameHistory", currentUserUid), { history: gameHistory });
-    // Firebase saqlangandan keyin darhol UI yangilanadi
-    renderGameHistory();
-  } catch (err) {
-    console.error("Firebase history saqlashda xato:", err);
-  }
-}
 
 /* =====================
    SAVE GAME RESULT
 ===================== */
 async function saveGameResult(sortedTeams) {
-  if (!currentUserUid || !db) return;
+  if (!currentUserUid || !db) {
+    console.error("UID yoki DB aniqlanmagan!");
+    return;
+  }
 
   const result = {
     date: new Date().toISOString(),
@@ -645,20 +565,35 @@ async function saveGameResult(sortedTeams) {
 
   const key = "gameHistory_" + currentUserUid;
 
-  // 🔹 LocalStorage
+  // 🔹 LocalStorage ga qo‘shish
   let history = JSON.parse(localStorage.getItem(key)) || [];
   history.push(result);
   localStorage.setItem(key, JSON.stringify(history));
 
-  // 🔹 Firebase
+  // 🔹 Global massivni update qilish
+  gameHistory = history;
+
+  // 🔹 Firebase-ga saqlash arrayUnion bilan
   try {
-    await setDoc(doc(db, "gameHistory", currentUserUid), { history }, { merge: true });
+    const ref = doc(db, "gameHistory", currentUserUid);
+
+    // Doc mavjudligini tekshiramiz
+    const docSnap = await getDoc(ref);
+    if (docSnap.exists()) {
+      // Agar mavjud bo‘lsa arrayUnion bilan qo‘shamiz
+      await updateDoc(ref, { history: arrayUnion(result) });
+    } else {
+      // Agar yo‘q bo‘lsa yangi doc yaratamiz
+      await setDoc(ref, { history: [result] });
+    }
+
     console.log("Game history Firebase-ga saqlandi ✅");
-  } catch (e) {
-    console.error("Game history Firebase-ga saqlashda xato:", e);
+  } catch (err) {
+    console.error("Firebase-ga saqlashda xato:", err);
   }
 
-  renderGameHistory();  // 🔹 UI yangilanadi
+  // 🔹 UI ni yangilash
+  renderGameHistory();
 }
 
 
@@ -667,80 +602,99 @@ async function renderGameHistory() {
   const historyBox = document.getElementById("historyList");
   if (!historyBox) return;
 
-  let gameHistory = JSON.parse(localStorage.getItem("gameHistory_" + currentUserUid)) || [];
+  const key = "gameHistory_" + currentUserUid; // 🔹 key nomini aniqladik
+  let gameHistory = JSON.parse(localStorage.getItem(key)) || [];
 
-  // 🔹 Agar localStorage bo‘sh bo‘lsa → Firebase fallback
+  // 🔹 Firebase fallback
   if (gameHistory.length === 0 && currentUserUid && db) {
     try {
       const docSnap = await getDoc(doc(db, "gameHistory", currentUserUid));
       if (docSnap.exists()) {
         gameHistory = docSnap.data().history || [];
-        localStorage.setItem("gameHistory_" + currentUserUid, JSON.stringify(gameHistory));
+        localStorage.setItem(key, JSON.stringify(gameHistory));
       }
     } catch (err) {
-      console.error("Firebase’dan tarixni olishda xato:", err);
+      console.error("Firebase’dan history olishda xato:", err);
     }
   }
 
   historyBox.innerHTML = "";
+
   gameHistory.forEach((game, index) => {
     const div = document.createElement("div");
     div.className = "historyItem";
+    div.style.position = "relative";
+
     div.innerHTML = `
       <strong>${index + 1}-o‘yin</strong>
-      <span>${new Date(game.date).toLocaleDateString()}</span>
-      <span>${new Date(game.date).toLocaleTimeString()}</span>
+      <span class="date">${new Date(game.date).toLocaleDateString()}</span>
+      <span class="time">${new Date(game.date).toLocaleTimeString()}</span>
       ${game.teams.map(t => `<div class="teamScore">${t.name}: ${t.score}</div>`).join('')}
     `;
+
+    // Close button
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "closeBtn";
+    closeBtn.innerText = "×";
+    closeBtn.onclick = async () => {
+      if (!confirm("Bu o‘yin natijasi o‘chirilsinmi?")) return;
+
+      gameHistory.splice(index, 1);
+
+      // 🔹 LocalStorage ga yozish
+      localStorage.setItem(key, JSON.stringify(gameHistory));
+
+      // 🔹 Firebase ga yozish
+      try {
+        await setDoc(doc(db, "gameHistory", currentUserUid), { history: gameHistory });
+        console.log("Firebase history item o‘chirildi ✅");
+      } catch (err) {
+        console.error("Firebase history item o‘chirishda xato:", err);
+      }
+
+      renderGameHistory();
+    };
+
+    div.appendChild(closeBtn);
     historyBox.appendChild(div);
   });
 }
-window.addEventListener("load", async () => {
-  if (!currentUserUid) return;
 
-  // 1️⃣ Firebase va localStorage dan topiclarni yuklash
-  await loadTopics();  
-
-  // 2️⃣ UI yangilash
-  renderUserTopics();
-
-  // 3️⃣ Oxirgi tanlangan topicni restore qilish
-  restoreLastTopic();
-
-  // 4️⃣ Game history render
-  await renderGameHistory();
-});
 
 
 
 /* =====================
    LOAD GAME HISTORY
 ===================== */
-async function loadGameHistory() {
-  const key = getUserHistoryLSKey();
-  const localData = localStorage.getItem(key);
-  if (localData) {
-    try { gameHistory = JSON.parse(localData); } 
-    catch { gameHistory = []; }
-    renderGameHistory();
+function getUserHistoryLSKey() {
+  return "gameHistory_" + currentUserUid;
+}
+
+async function loadGameHistorySafe() {
+  if (!currentUserUid || !db) return;
+
+  const key = "gameHistory_" + currentUserUid;
+
+  // 1️⃣ LocalStorage dan yuklash
+  let history = JSON.parse(localStorage.getItem(key)) || [];
+
+  // 2️⃣ Agar local bo‘sh bo‘lsa → Firebase fallback
+  if (history.length === 0) {
+    try {
+      const docSnap = await getDoc(doc(db, "gameHistory", currentUserUid));
+      if (docSnap.exists()) {
+        history = docSnap.data().history || [];
+        localStorage.setItem(key, JSON.stringify(history));
+      }
+    } catch (err) {
+      console.error("Firebase’dan history olishda xato:", err);
+    }
   }
 
-  // Firebase fallback
-  if (!currentUserUid || !db) return;
-  try {
-    const snap = await getDoc(doc(db, "gameHistory", currentUserUid));
-    if (snap.exists()) {
-      const data = snap.data();
-      if (JSON.stringify(data.history) !== JSON.stringify(gameHistory)) {
-        gameHistory = data.history || [];
-        localStorage.setItem(key, JSON.stringify(gameHistory));
-        renderGameHistory();
-      }
-    }
-  } catch (err) {
-    console.error("Firebase’dan history olishda xato:", err);
-  }
+  // 3️⃣ Global massivni update qilish
+  gameHistory = history;
 }
+
 
 
 // =====================
@@ -833,205 +787,45 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
+function shuffleQuestionsByButton() {
+  if (!questions || questions.length === 0) {
+    alert("Avval savollarni yuklang!");
+    return;
+  }
 
-/* =====================
-   RESET GAME
-===================== */
-function resetGame() {
-  if (!confirm("O‘yin reset qilinsinmi?")) return;
-
-  // Timer to‘xtatish
-  clearInterval(timer);
-
-  // Board: cell-larni tozalash va used class-ni olib tashlash
-  const cells = board.querySelectorAll(".cell");
-  let idx = 0;
-  const maxRows = Math.max(...questions.map(c => c.length));
-  for (let r = 0; r < maxRows; r++) {
-    for (let c = 0; c < questions.length; c++) {
-      const item = questions[c][r];
-      const cell = cells[idx];
-      if (!cell) continue;
-
-      if (item) {
-        cell.innerText = (r + 1) * 100;
-        cell.classList.remove("used");
-      } else {
-        cell.innerText = "";
-        cell.classList.add("used");
-      }
-      idx++;
+  // 1️⃣ barcha savollarni bitta massivga yig‘amiz
+  let allQuestions = [];
+  questions.forEach(cat => {
+    if (Array.isArray(cat) && cat.length > 0) {
+      allQuestions.push(...cat);
     }
-  }
-
-  // Teams
-  document.getElementById("teams").innerHTML = "";
-  teamsData = [];
-  teamCount = 0;
-
-  // Modals
-  document.getElementById("modal").style.display = "none";
-  document.getElementById("winnerModal").style.display = "none";
-
-  // Confetti tozalash
-  const canvas = document.getElementById("confetti");
-  const ctx = canvas.getContext("2d");
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Board qayta render qilinadi, lekin savollar saqlanadi
-  renderBoard();
-  loadQuestionsForEdit();
-
-  alert("O‘yin reset qilindi!");
-}
-
-/* =====================
-   TOPICS (TEMP)
-===================== */
-
-const topicsTemp = [
-  { id: "t1", title: "Vaqt va sana" },
-  { id: "t2", title: "Joylashuv" },
-  { id: "t3", title: "Kundalik hayot" }
-];
-
-function renderTopics() {
-  const list = document.getElementById("topicsList");
-  if (!list) return;
-
-  list.innerHTML = "";
-
-  topicsTemp.forEach(t => {
-    const div = document.createElement("div");
-    div.className = "topicCard";
-    div.innerText = t.title;
-
-    div.onclick = () => {
-      alert(`"${t.title}" mavzusi tanlandi (hozircha faqat ko‘rinish)`);
-    };
-
-    list.appendChild(div);
   });
-}
 
-
-
-/* =====================
-   ADMIN PANEL & EXCEL
-===================== */
-const toggleBtn = document.getElementById("toggleAdminBtn");
-const adminPanel = document.getElementById("adminPanel");
-
-toggleBtn.addEventListener("click", () => {
-  if (adminPanel.style.display === "none" || adminPanel.style.display === "") {
-    adminPanel.style.display = "block";
-    toggleBtn.innerText = "Admin panelni yopish";
-  } else {
-    adminPanel.style.display = "none";
-    toggleBtn.innerText = "Admin panelni ko‘rsat";
-  }
-});
-
-async function addQuestion() {
-  const q = document.getElementById("newQuestion").value.trim();
-  const a = document.getElementById("newAnswer").value.trim();
-  const cat = parseInt(document.getElementById("catSelect").value);
-
-  if (!q || !a) return alert("Savol va javobni kiriting!");
-
-  questions[cat].push({ q, a });
-  renderBoard();
-  loadQuestionsForEdit();
-
-  const topic = userTopics.find(t => t.id === currentUserTopicId);
-  if (topic) {
-    topic.questions = JSON.parse(JSON.stringify(questions));
-    saveTopicsToLocal();
-    await saveTopicsToFirebase();  // 🔹 Firebase-ga push
-    renderUserTopics();             // 🔹 savollar soni yangilanadi
+  if (allQuestions.length === 0) {
+    alert("Savollar mavjud emas!");
+    return;
   }
 
-  document.getElementById("newQuestion").value = "";
-  document.getElementById("newAnswer").value = "";
-}
+  // 2️⃣ Butun massivni aralashtiramiz
+  shuffleArray(allQuestions);
 
-
-
-
-
-function loadQuestionsForEdit() {
-  const select = document.getElementById("editCategory");
-  if (!select || select.value === "") return;
-
-  const cat = parseInt(select.value);
-  const editList = document.getElementById("editList");
-  editList.innerHTML = "";
-
-  if (!questions[cat]) return;
-
-  questions[cat].forEach((it, i) => {
-    editList.innerHTML += `
-      <div class="editItem">
-        <input id="q_${cat}_${i}" value="${it.q}">
-        <input id="a_${cat}_${i}" value="${it.a}">
-        <button onclick="saveEdit(${cat},${i})">Saqlash</button>
-        <button onclick="deleteQuestion(${cat},${i})">O‘chirish</button>
-      </div>
-    `;
+  // 3️⃣ 5 kategoriya bo‘yicha qayta taqsimlash
+  const newQuestions = [[], [], [], [], []];
+  allQuestions.forEach((q, index) => {
+    const cat = index % 5;  // 5 ustun bo‘yicha
+    newQuestions[cat].push(q);
   });
-}
 
-async function deleteAllQuestions() {
-  const cat = parseInt(editCategory.value);
-  if (isNaN(cat)) return alert("Kategoriya tanlang!");
+  questions = newQuestions; // global massivga saqlaymiz
 
-  if (!confirm("Hamma savollar o‘chiriladi! Davom etilsinmi?")) return;
-
-  // Hamma savollarni o‘chirish
-  questions[cat] = [];
-
-  // LocalStorage va Firebase ga saqlash
-  await saveQuestions();
-
-  // Board va editList yangilash
   renderBoard();
-  loadQuestionsForEdit();
 
-  alert("Kategoriya bo‘yicha barcha savollar o‘chirildi!");
-}
-// Barcha kategoriyalarni o'chirish
-async function deleteAllCategoriesQuestions() {
-  if (!confirm("Barcha kategoriyalardagi savollar o‘chiriladi! Davom etilsinmi?")) return;
-
-  // Har bir kategoriya bo‘yicha savollarni tozalash
-  for (let i = 0; i < questions.length; i++) {
-    questions[i] = [];
+  if (typeof loadQuestionsForEdit === "function") {
+    loadQuestionsForEdit();
   }
 
-  // LocalStorage va Firebase ga saqlash
-  await saveQuestions();
-
-  // Board va editList yangilash
-  renderBoard();
-  loadQuestionsForEdit();
-
-  alert("Barcha kategoriyalardagi savollar o‘chirildi!");
+  alert("Savollar to‘liq random aralashtirildi!");
 }
-
-async function saveEdit(cat, i) {
-  questions[cat][i].q = document.getElementById(`q_${cat}_${i}`).value;
-  questions[cat][i].a = document.getElementById(`a_${cat}_${i}`).value;
-  await saveQuestions();
-  renderBoard();
-}
-
-async function deleteQuestion(cat, i) {
-  questions[cat].splice(i, 1);
-  await saveQuestions();
-  renderBoard();
-  loadQuestionsForEdit();
-}
-//RANDOM QILISH//
 function shuffleArray(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -1039,101 +833,15 @@ function shuffleArray(arr) {
   }
 }
 
-function shuffleQuestionsByButton() {
-  // 1️⃣ Bo‘sh bo‘lsa ham massivni to‘g‘ri tekshirish
-  if (!questions || questions.length === 0) {
-    alert("Avval savollarni yuklang!");
-    return;
-  }
 
-  // 2️⃣ Har bir kategoriya array mavjudligini tekshirish
-  for (let i = 0; i < questions.length; i++) {
-    if (!Array.isArray(questions[i])) questions[i] = [];
-  }
-
-  // 3️⃣ Shuffle faqat bo‘sh bo‘lmagan category-larda
-  questions.forEach(cat => {
-    if (cat.length > 0) shuffleArray(cat);
-  });
-
-  // 4️⃣ Board va edit panel yangilash
-  renderBoard();
-  loadQuestionsForEdit();
-
-  // 5️⃣ Endi alert har doim chiqadi
-  alert("Savollar random aralashtirildi!");
-}
-
-//IMPORT EXCEL//
-function importExcel() {
-  const input = document.getElementById("excelInput");
-  const file = input.files[0];
-  if (!file) return alert("Excel fayl tanlanmadi");
-
-  const reader = new FileReader();
-  reader.onload = async function(e) {
-    const data = new Uint8Array(e.target.result);
-    const workbook = XLSX.read(data, { type: "array" });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-    if (!rows.length) return alert("Excel bo‘sh");
-
-    // Kategoriya arraylarini bo‘sh qilish
-    for (let i = 0; i < questions.length; i++) questions[i].length = 0;
-
-    let counter = 0;
-    rows.forEach(r => {
-      const q = r.Question || r.question || r.QUESTION;
-      const a = r.Answer || r.answer || r.ANSWER;
-      if (!q || !a) return;
-
-      let catIndex;
-      if (r.Category || r.category || r.CATEGORY) {
-        const num = Number(r.Category || r.category || r.CATEGORY);
-        catIndex = (num >= 1 && num <= 5) ? num - 1 : counter % 5;
-      } else {
-        catIndex = counter % 5;
-      }
-      counter++;
-
-      questions[catIndex].push({ q: q.trim(), a: a.trim() });
-    });
-
-    renderBoard();
-    loadQuestionsForEdit();
-
-    // 🔴 SAVOLLARNI LOCALSTORAGE VA FIREBASE GA SAQLASH
-    await saveQuestions();
-
-    alert("Excel’dan savollar muvaffaqiyatli yuklandi!");
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-
-
-
-
-function getUserHistoryLSKey() {
-  return "jeopardyHistory_" + currentUserUid;
-}
 
 
 /* =====================
    GLOBAL FUNCTIONS
 ===================== */
 window.shuffleQuestionsByButton = shuffleQuestionsByButton;
-window.deleteAllCategoriesQuestions = deleteAllCategoriesQuestions;
-window.deleteAllQuestions = deleteAllQuestions;
 window.openQ = openQ;
 window.showAnswer = showAnswer;
 window.closeModal = closeModal;
 window.addTeam = addTeam;
 window.addScore = addScore;
-window.addQuestion = addQuestion;
-window.loadQuestionsForEdit = loadQuestionsForEdit;
-window.saveEdit = saveEdit;
-window.deleteQuestion = deleteQuestion;
-window.resetGame = resetGame;
-window.importExcel = importExcel;
-window.importDefaultFromFirebase = importDefaultFromFirebase;

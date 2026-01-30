@@ -14,6 +14,102 @@ body {
     background-attachment: fixed;    /* scroll bo‘lsa ham qimirlamaydi */
     font-family: Arial, sans-serif;
 }
+/* ----------------------
+   GLOBAL FORM ELEMENTS
+------------------------ */
+/* Har bir control blok */
+.topicControls,
+.shuffleControls,
+.timerControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px; /* elementlar orasida bo‘sh joy */
+  margin-bottom: 15px;
+}
+
+/* Inputlar */
+input[type="text"],
+input[type="number"],
+input[type="file"] {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  transition: all 0.2s;
+  flex-shrink: 0; /* kichik bo‘lsa qisqarmasin */
+}
+
+/* Max-width bilan cheklash */
+input[type="text"] {
+  width: 200px; /* topic nomi uchun o‘rtacha kenglik */
+}
+
+input[type="number"] {
+  width: 80px; /* sekund inputi keng emas */
+}
+
+input[type="file"] {
+  width: 180px; /* Excel fayl inputi */
+}
+
+input:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 5px rgba(79, 70, 229, 0.5);
+}
+
+/* Tugmalar */
+button {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: none;
+  background-color: #4f46e5;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+button:hover {
+  background-color: #3730a3;
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+/* Katta tugma */
+.bigBtn {
+  background-color: #ec4899;
+}
+
+.bigBtn:hover {
+  background-color: #be185d;
+}
+
+/* Label */
+label {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+/* Responsive kichik ekranlar */
+@media (max-width: 600px) {
+  .topicControls,
+  .shuffleControls,
+  .timerControls {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  input,
+  button {
+    width: 100% !important;
+  }
+}
+
+
 
 h1 {
   margin: 24px 0;
@@ -172,68 +268,6 @@ h1 {
 }
 
 
-/*.modal {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.85);
-    z-index: 1000;
-}
-
-.modal-box {
-    background: white;
-    color: black;
-    width: 90%;
-    max-width: 800px;
-    margin: 5% auto;
-    padding: 40px;
-    border-radius: 16px;
-}
-
-#qText {
-    font-size: 52px;
-    font-weight: bold;
-    margin-bottom: 20px;
-}
-
-#aText {
-    font-size: 52px;
-    margin-top: 20px;
-}
-
-#timer {
-    font-size: 44px;
-    margin: 10px 0;
-}
-
-.bigBtn {
-    padding: 12px 20px;
-    margin: 10px;
-    font-size: 18px;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;        
-    font-weight: bold;
-    transition: 0.3s;
-    background: rgba(255, 255, 255, 0.65); 
-    color: rgb(12, 12, 12);
-    border: none;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-}
-
-.bigBtn:hover {
-    
-    transform: translateY(-2px) scale(1.03);
-    box-shadow: 0 10px 25px rgba(0, 198, 255, 0.45);
-    background: rgba(255, 255, 255, 0.9);
-}
-
-#bigBtn:active {
-  transform: scale(0.97);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-}*/
-
-/* Modal fonini chiroyli qilish */
 .modal {
     display: none;
     position: fixed;
@@ -530,108 +564,7 @@ select {
     border-radius: 10px;
     width: 200px;
 }
-/* =====================
-   ADMIN PANEL
-===================== */
-#adminPanel {
-    display: none; /* dastlab yopiq bo‘ladi */
-    margin-top: 30px;
-    margin-bottom: 40px;
-    background: #f3f4f6;
-    padding: 30px;
-    border-radius: 16px;
-    max-width: 100%px;
-    margin-left: auto;
-    margin-right: auto;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-}
-#toggleAdminBtn {
-  padding: 12px 24px;
-  font-size: 18px;
-  font-weight: bold;
-  border-radius: 12px;
-  border: none;
-  cursor: pointer;
 
-  background: #2563eb; /* asosiy ko‘k rang */
-  color: white;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  transition: all 0.2s ease;
-}
-
-/* Hover effekti */
-#toggleAdminBtn:hover {
-  background: #1e40af;  /* qorong‘u ko‘k */
-  transform: scale(1.05);
-  box-shadow: 0 6px 16px rgba(0,0,0,0.2);
-}
-
-/* Bosilganda kichik “press” effekti */
-#toggleAdminBtn:active {
-  transform: scale(0.98);
-  box-shadow: 0 3px 10px rgba(0,0,0,0.15);
-}
-
-/* Sarlavhalar */
-#adminPanel h2,
-#adminPanel h3 {
-    font-size: 28px;
-    font-weight: bold;
-    margin-bottom: 20px;
-    text-align: center;
-    color: #111827;
-}
-
-/* Tahrirlash bloklari */
-.editItem {
-    background: #ffffff;       /* oq fon, input va buttonlar yaxshi ko‘rinadi */
-    padding: 12px 20px;
-    margin: 10px auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    border-radius: 12px;
-    max-width: 900px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-}
-
-/* Inputlar tahrirlashda */
-.editItem input {
-    width: 25%;                /* input kengligi */
-    min-width: 250px;          /* minimal kenglik */
-    max-width: 450px;          /* maksimal kenglik */
-    padding: 12px 16px;
-    font-size: 20px;           /* harf kattaligi */
-    border-radius: 8px;
-    border: 1px solid #d1d5db;
-    text-align: left;
-    transition: all 0.2s ease;
-}
-
-.editItem input:focus {
-    outline: none;
-    border-color: #2563eb;     /* fokus rang */
-    box-shadow: 0 0 0 3px rgba(37,99,235,0.2);
-}
-
-/* Buttonlar tahrirlashda */
-.editItem button {
-    font-size: 20px;
-    padding: 12px 24px;
-    border-radius: 8px;
-    cursor: pointer;
-    border: none;
-    background: #2563eb;
-    color: white;
-    font-weight: bold;
-    transition: all 0.2s ease;
-}
-
-.editItem button:hover {
-    background: #1e40af;
-    transform: scale(1.05);
-}
 
 
 #winnerModal {
@@ -841,39 +774,6 @@ select {
   color: #ff7875;
 }
 
-/* input va tugmalar */
-#newUserTopicTitle,
-#userTopicExcelInput {
-  margin-top: 10px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  font-size: 16px;
-}
-
-#newUserTopicTitle:focus,
-#userTopicExcelInput:focus {
-  outline: none;
-  border-color: #ffffff;
-  box-shadow: 0 0 6px #dbdbdb80;
-}
-
-button {
-  margin-left: 6px;
-  padding: 8px 16px;
-  font-size: 16px;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  background-color: #ffffff;
-  color: #000;
-  transition: 0.2s;
-  
-}
-
-button:hover {
-  background-color: #c6c6c6;
-}
 
 /* =========================
    GAME HISTORY – GRID STYLE
