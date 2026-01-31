@@ -108,10 +108,11 @@ function renderUserTopics() {
     div.className = "topicCard";
     div.id = topic.id;
 
-    const totalQs = Object.values(topic.questions).reduce(
-  (sum, cat) => sum + cat.length,
+const totalQs = Object.values(topic.questions).reduce(
+  (sum, cat) => sum + (Array.isArray(cat) ? cat.length : 0),
   0
 );
+
     div.innerHTML = `
       <strong>${topic.title}</strong>
       <span>${totalQs} ta savol</span>
