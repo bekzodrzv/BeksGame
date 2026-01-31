@@ -74,16 +74,16 @@
 </div>
 
 <input type="text" id="newUserTopicTitle" placeholder="Yangi topic nomi">
-<button onclick="addUserTopic()">Qo‘shish</button>
+<button class="bigBtn" onclick="addUserTopic()">Qo‘shish</button>
 
 <input type="file" id="userTopicExcelInput">
-<button onclick="importExcelForUserTopic()">Excel’dan yuklash</button>
+<button class="bigBtn" onclick="importExcelForUserTopic()">Excel’dan yuklash</button>
 
-
-<label for="timerInput">Savol vaqti (sekund):</label>
+<div class="timeredit">
+<label class="secund"for="timerInput">Savol vaqti (sekund):</label>
 <input type="number" id="timerInput" min="1" max="300" value="10">
-<button onclick="updateTimer()">O‘zgartirish</button>
-
+<button class="bigBtn" onclick="updateTimer()">O‘zgartirish</button>
+</div>
 <button class="bigBtn" onclick="shuffleQuestionsByButton()">🔀 Savolarni Aralashtrish</button>
 
   <!-- Winner Modal -->

@@ -29,15 +29,38 @@ body {
 }
 
 /* Inputlar */
+.timeredit{
+  display: inline-block;
+}
+input[type="number"]
+ {
+   padding: 12px 16px;
+  font-size: 20px;
+  border-radius: 12px;
+  border: none;
+  outline: none;
+
+  
+
+  background: rgb(255, 255, 255);
+  backdrop-filter: blur(10px);
+
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+}
 input[type="text"],
-input[type="number"],
 input[type="file"] {
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  font-size: 14px;
-  transition: all 0.2s;
-  flex-shrink: 0; /* kichik bo‘lsa qisqarmasin */
+   padding: 12px 16px;
+  font-size: 16px;
+  border-radius: 12px;
+  border: none;
+  outline: none;
+
+  min-width: 220px;
+
+  background: rgb(255, 255, 255);
+  backdrop-filter: blur(10px);
+
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
 }
 
 /* Max-width bilan cheklash */

@@ -370,15 +370,18 @@ function addTeam() {
 }
 
 function addScore(id, sign) {
-  const team = teamsData.find(t=>t.id===id);
+  const team = teamsData.find(t => t.id === id);
   if(!team) return;
 
-  const points = currentValue * currentQuestionMultiplier * sign;
+  // Agar minus bo'lsa multiplikatorni 1 deb olamiz
+  const multiplier = sign > 0 ? currentQuestionMultiplier : 1;
+  const points = currentValue * multiplier * sign;
   team.score += points;
 
   const el = document.getElementById("t"+id);
-  if(el) el.innerText=team.score;
+  if(el) el.innerText = team.score;
 
+  // Qo‘shishdan keyin multiplikatorni reset qilamiz
   currentQuestionMultiplier = 1;
 
   const all = document.querySelectorAll(".cell").length;
@@ -663,11 +666,23 @@ function getGameHistoryLSKey() {
 }
 
 function resetBoardOnly() {
-  // Barcha kataklarni yana faol qilish
-  document.querySelectorAll(".cell").forEach(cell => {
+  const allCells = document.querySelectorAll(".cell");
+  const qCategories = Object.values(questions);
+  const maxRows = Math.max(...qCategories.map(c => c.length));
+
+  allCells.forEach((cell, index) => {
     cell.classList.remove("used");
-    const row = Math.floor([...document.querySelectorAll(".cell")].indexOf(cell) / 5);
-    cell.innerText = (row + 1) * 100;
+
+    const row = Math.floor(index / 5);
+    const col = index % 5;
+
+    // Haqiqiy savol bor yoki yo‘qligini tekshiramiz
+    if (qCategories[col] && qCategories[col][row]) {
+      cell.innerText = (row + 1) * 100;
+    } else {
+      cell.innerText = "";
+      cell.classList.add("used"); // bo‘sh katakni ishlatilgan deb belgilaymiz
+    }
   });
 
   // Teamlar score’ni nolga tushiramiz
@@ -679,6 +694,7 @@ function resetBoardOnly() {
 
   gameInProgress = false;
 }
+
 function shuffleTopicQuestions() {
   if (!questions || questions.length === 0) {
     alert("Avval savollarni yuklang!");
@@ -727,8 +743,7 @@ function shuffleQuestionsByButton() {
   shuffleTopicQuestions();
 }
 
-// Window ga qo‘shamiz, shunda HTML onclick ishlaydi
-window.shuffleQuestionsByButton = shuffleQuestionsByButton;
+
  
 /* =====================
    EXPORT TO WINDOW
@@ -744,6 +759,6 @@ window.closeModal=closeModal;
 window.updateTimer=updateTimer;
 window.addTeam=addTeam;
 window.addScore=addScore;
-window.closeWinnerModal=closeWinnerModal;
 window.resetBoardOnly=resetBoardOnly;
 window.shuffleTopicQuestions = shuffleTopicQuestions;
+window.shuffleQuestionsByButton = shuffleQuestionsByButton;
