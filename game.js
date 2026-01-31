@@ -51,6 +51,7 @@ function saveTopicsToLocal() {
 async function saveTopicsToFirebase() {
   if (!currentUserUid || !db) return;
   try {
+    // 🔹 userTopics array ichidagi har bir topic.questions object bo‘lishi kerak
     await setDoc(doc(db, "userTopics", currentUserUid), { topics: userTopics });
     console.log("Topics Firebase-ga saqlandi ✅");
   } catch (e) {
@@ -58,41 +59,41 @@ async function saveTopicsToFirebase() {
   }
 }
 
+
+
 // Load topics (localStorage + Firebase fallback)
 function getUserTopicsLSKey() {
   return "userTopics_" + currentUserUid;
 }
 
 async function loadTopicsSafe() {
-  let localTopics = [];
+  userTopics = [];
 
-  // 1️⃣ LocalStorage
-  const localData = localStorage.getItem(getUserTopicsLSKey());
-  if (localData) {
-    try {
-      localTopics = JSON.parse(localData);
-    } catch {
-      localTopics = [];
-    }
-  }
+  console.log("🔄 Loading topics for:", currentUserUid);
 
-  userTopics = localTopics;
-
-  // 2️⃣ Firebase
   try {
     const snap = await getDoc(doc(db, "userTopics", currentUserUid));
     if (snap.exists()) {
-      const fbTopics = snap.data().topics;
-
-      if (Array.isArray(fbTopics) && fbTopics.length > 0) {
-        userTopics = fbTopics;
-        localStorage.setItem(getUserTopicsLSKey(), JSON.stringify(fbTopics));
-      }
+      const fbTopics = snap.data().topics || [];
+      console.log("📥 Topics from Firebase:", fbTopics);
+      userTopics = fbTopics;
+      localStorage.setItem(getUserTopicsLSKey(), JSON.stringify(fbTopics));
+      return;
     }
   } catch (e) {
-    console.error("Topic load error:", e);
+    console.error("❌ Firebase topic load error:", e);
+  }
+
+  // fallback
+  const localData = localStorage.getItem(getUserTopicsLSKey());
+  if (localData) {
+    try {
+      userTopics = JSON.parse(localData);
+      console.log("📦 Topics from Local:", userTopics);
+    } catch {}
   }
 }
+
 
 
 // Render topics panel
@@ -107,10 +108,10 @@ function renderUserTopics() {
     div.className = "topicCard";
     div.id = topic.id;
 
-    const totalQs = topic.questions.reduce(
-      (sum, cat) => sum + (Array.isArray(cat) ? cat.length : 0),
-      0
-    );
+    const totalQs = Object.values(topic.questions).reduce(
+  (sum, cat) => sum + cat.length,
+  0
+);
     div.innerHTML = `
       <strong>${topic.title}</strong>
       <span>${totalQs} ta savol</span>
@@ -145,17 +146,20 @@ async function addUserTopic() {
   const topic = {
     id: "topic_" + Date.now(),
     title,
-    questions: [[], [], [], [], []],
+    questions: {
+      0: [],
+      1: [],
+      2: [],
+      3: [],
+      4: []
+    },
     createdAt: Date.now()
   };
 
   userTopics.push(topic);
   input.value = "";
 
-  // 1️⃣ Darhol UI yangilash
   renderUserTopics();
-
-  // 2️⃣ Saqlash localStorage + Firebase
   saveTopicsToLocal();
   await saveTopicsToFirebase();
 
@@ -172,24 +176,23 @@ function selectUserTopic(topicId) {
   currentUserTopicId = topicId;
   localStorage.setItem("lastTopicId", topicId);
 
-  // Global questions
-  questions = JSON.parse(JSON.stringify(topic.questions));
+  questions = questionsObjectToArray(topic.questions);
   renderBoard();
-  if (typeof loadQuestionsForEdit === "function") loadQuestionsForEdit();
 }
 
 // Restore last topic
 function restoreLastTopic() {
   const lastId = localStorage.getItem("lastTopicId");
-  if (!lastId || userTopics.length === 0) return;
+  if (!lastId) return;
 
   const topic = userTopics.find(t => t.id === lastId);
   if (!topic) return;
 
   currentUserTopicId = topic.id;
-  questions = JSON.parse(JSON.stringify(topic.questions));
+  questions = questionsObjectToArray(topic.questions);
   renderBoard();
 }
+
 
 // Import Excel for selected topic
 async function importExcelForUserTopic() {
@@ -208,7 +211,8 @@ async function importExcelForUserTopic() {
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
-    topic.questions = [[], [], [], [], []];
+    topic.questions = { 0: [], 1: [], 2: [], 3: [], 4: [] };
+
     let index = 0;
     rows.forEach(r => {
       const q = r.Question || r.question || r.QUESTION;
@@ -237,6 +241,17 @@ async function importExcelForUserTopic() {
   };
   reader.readAsArrayBuffer(file);
 }
+
+function questionsObjectToArray(qObj) {
+  return [
+    qObj[0] || [],
+    qObj[1] || [],
+    qObj[2] || [],
+    qObj[3] || [],
+    qObj[4] || []
+  ];
+}
+
 
 // Delete topic
 async function deleteUserTopic(topicId) {
@@ -319,23 +334,32 @@ function getUserLSKey() {
 function renderBoard() {
   const board = document.getElementById("board");
   board.innerHTML = "";
-  const maxRows = Math.max(...questions.map(c => c.length));
+
+  // 🔹 Object → Array
+  const qCategories = Object.values(questions);
+
+  const maxRows = Math.max(...qCategories.map(c => c.length));
 
   for (let r = 0; r < maxRows; r++) {
     for (let c = 0; c < 5; c++) {
-      const item = questions[c][r];
+      const category = qCategories[c] || [];
+      const item = category[r];
       const cell = document.createElement("div");
       cell.className = "cell";
+
       if (item) {
         cell.innerText = (r + 1) * 100;
         cell.onclick = () => openQ(cell, item);
       } else {
         cell.classList.add("used");
       }
+
       board.appendChild(cell);
     }
   }
 }
+
+
 
 
 /* =====================
@@ -671,30 +695,30 @@ function getUserHistoryLSKey() {
 }
 
 async function loadGameHistorySafe() {
-  if (!currentUserUid || !db) return;
+  gameHistory = [];
 
-  const key = "gameHistory_" + currentUserUid;
-
-  // 1️⃣ LocalStorage dan yuklash
-  let history = JSON.parse(localStorage.getItem(key)) || [];
-
-  // 2️⃣ Agar local bo‘sh bo‘lsa → Firebase fallback
-  if (history.length === 0) {
-    try {
-      const docSnap = await getDoc(doc(db, "gameHistory", currentUserUid));
-      if (docSnap.exists()) {
-        history = docSnap.data().history || [];
-        localStorage.setItem(key, JSON.stringify(history));
-      }
-    } catch (err) {
-      console.error("Firebase’dan history olishda xato:", err);
+  // 🔥 1️⃣ Firebase
+  try {
+    const snap = await getDoc(doc(db, "gameHistory", currentUserUid));
+    if (snap.exists()) {
+      gameHistory = snap.data().history || [];
+      localStorage.setItem(getUserHistoryLSKey(), JSON.stringify(gameHistory));
+      return;
     }
+  } catch (e) {
+    console.error("Firebase history load error:", e);
   }
 
-  // 3️⃣ Global massivni update qilish
-  gameHistory = history;
+  // 🔁 2️⃣ Local fallback
+  const localData = localStorage.getItem(getUserHistoryLSKey());
+  if (localData) {
+    try {
+      gameHistory = JSON.parse(localData);
+    } catch {
+      gameHistory = [];
+    }
+  }
 }
-
 
 
 // =====================
@@ -779,12 +803,7 @@ function showWinnerModal(sorted) {
   }, 15000);
 }
 
-// =====================
-// 5️⃣ Page load → history render
-// =====================
-document.addEventListener("DOMContentLoaded", () => {
-  renderGameHistory();
-});
+
 
 
 function shuffleQuestionsByButton() {
