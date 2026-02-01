@@ -315,6 +315,8 @@ h1 {
     text-align: center;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     transition: transform 0.3s ease, opacity 0.3s ease;
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 /* Savol */
@@ -954,7 +956,9 @@ select {
 
 
 
-
+.board {
+    overflow-x: auto;  /* gorizontal scroll */
+}
 
 
 
@@ -986,4 +990,34 @@ select {
         font-size: 18px;
         padding: 10px 24px;
     }
+  }
+
+@media(max-width:600px){
+    /* modal va savol fonti */
+    .modal-box {
+        max-width: 95%;
+        padding: 20px;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    #qText, #aText {
+        font-size: 5vw; /* ekran kengligiga mos */
+    }
+
+    /* board kataklari 2 ta qatorda */
+    .board {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 5px;
+    }
+    .cell {
+        font-size: 22px;
+        padding: 16px 0;
+    }
+
+    /* logout button kichik ekran uchun */
+    #logoutBtn {
+        font-size: 14px;
+        padding: 6px 12px;
+    }
 }
+
