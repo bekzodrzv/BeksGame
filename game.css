@@ -950,6 +950,11 @@ select {
         font-size: 36px;
     }
 
+    .brand-logo {
+    width:40px;   /* kattaroq logo */
+    height: auto;
+   }
+
     .categories {
         grid-template-columns: repeat(2, 1fr);
         font-size: 18px;
@@ -1003,4 +1008,5 @@ select {
         padding: 6px 12px;
     }
 }
+
 
