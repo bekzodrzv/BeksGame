@@ -135,16 +135,21 @@ label {
 
 
 h1 {
-  margin: 24px 0;
+  margin:5px;
   text-align: center;
+}
+
+.brand-logo {
+    width:40px;   /* kattaroq logo */
+    height: auto;
 }
 
 /* Beks Game — asosiy nom */
 .brand-main {
-  font-size: 52px;
+  font-size: 35px;
   font-weight: 900;
   letter-spacing: 1.5px;
-  color: #1f2937; /* toza qora-ko‘kimtir */
+  color: #000000cd; /* toza qora-ko‘kimtir */
 
   text-shadow:
     0 4px 14px rgba(0,0,0,0.18);
@@ -154,11 +159,11 @@ h1 {
 .brand-sub {
   display: inline-block;
   margin-left: 14px;
-  font-size: 22px;
+  font-size: 25px;
   font-weight: 600;
   letter-spacing: 0.5px;
 
-  color: #6b7280; /* soft kulrang */
+  color: #090909dc; /* soft kulrang */
 }
 
 /* F — aksent */
@@ -167,20 +172,6 @@ h1 {
   font-weight: 900;
 }
 
-/* hover – premium effekt */
-h1:hover .brand-main {
-  letter-spacing: 2.5px;
-  transform: scale(1.03);
-}
-
-h1:hover .brand-sub {
-  color: #374151;
-}
-
-.brand-main,
-.brand-sub {
-  transition: all 0.3s ease;
-}
 
 
 /* Logout buttonini yuqori o‘ng burchakka joylash */
@@ -316,7 +307,7 @@ h1 {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     transition: transform 0.3s ease, opacity 0.3s ease;
     max-height: 90vh;
-    overflow-y: auto;
+    
 }
 
 /* Savol */
@@ -950,14 +941,6 @@ select {
   font-size: 32px;
   font-weight: bold;
   color: red;
-}
-
-
-
-
-
-.board {
-    overflow-x: auto;  /* gorizontal scroll */
 }
 
 
