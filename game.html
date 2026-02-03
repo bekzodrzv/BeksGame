@@ -19,6 +19,20 @@
   </span>
 </h1>
 
+<!-- Account Settings Modal -->
+<div class="modal" id="accountModal">
+  <div class="modal-box">
+    <h2>Profil sozlamalari</h2>
+    <label for="displayNameInput"></label>
+    <input type="text" id="displayNameInput" placeholder="Ismingiz">
+    <br><br>
+    <button class="bigBtn" id="saveProfileBtn">Saqlash</button>
+    <button class="bigBtn" onclick="closeAccountModal()">Yopish</button>
+  </div>
+</div>
+
+<!-- Account Settings button (Logout yonida) -->
+<button class="bigBtn" id="accountBtn">Profil</button>
 
   <!-- Logout -->
   <button class="bigBtn" id="logoutBtn">Chiqish</button>
@@ -58,6 +72,7 @@
   <div class="teamAdd">
     <input type="text" id="teamNameInput" placeholder="Team nomi">
     <button class="bigBtn" onclick="addTeam()">Team qo‘shish</button>
+    <button class="shBtn" onclick="shuffleQuestionsByButton()">🔀 Savolarni Aralashtrish</button>
   </div>
   <div class="teams" id="teams"></div>
 
@@ -94,7 +109,7 @@
 <input type="number" id="timerInput" min="1" max="300" value="10">
 <button class="bigBtn" onclick="updateTimer()">O‘zgartirish</button>
 </div>
-<button class="bigBtn" onclick="shuffleQuestionsByButton()">🔀 Savolarni Aralashtrish</button>
+
 
   <!-- Winner Modal -->
   <div id="winnerModal">

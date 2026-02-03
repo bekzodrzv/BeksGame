@@ -678,6 +678,35 @@ console.log("UID:", currentUserUid);
   await loadOtherTopics();     // 3️⃣ BOSHQA USER TOPICS (endi yana chiqadi)
 });
 
+// Account modal
+const accountBtn = document.getElementById("accountBtn");
+const accountModal = document.getElementById("accountModal");
+const displayNameInput = document.getElementById("displayNameInput");
+const saveProfileBtn = document.getElementById("saveProfileBtn");
+
+accountBtn.onclick = () => {
+    displayNameInput.value = auth.currentUser.displayName || "";
+    accountModal.style.display = "flex";
+};
+
+window.closeAccountModal = () => {
+    accountModal.style.display = "none";
+};
+
+// Saqlash tugmasi
+saveProfileBtn.onclick = async () => {
+    const newName = displayNameInput.value.trim();
+    if (!newName) return alert("Iltimos, ism kiriting!");
+    try {
+        await updateDoc(getUserDocRef(), { displayName: newName });
+        
+        accountModal.style.display = "none";
+    } catch (err) {
+        console.error("❌ Profil saqlashda xato:", err);
+        alert("Xatolik yuz berdi!");
+    }
+};
+
 
 
 
@@ -769,17 +798,19 @@ async function loadOtherTopics() {
   try {
     const usersSnap = await getDocs(collection(db, "users"));
 
+    const userMap = {}; // userId → displayName xaritasi
     for (const userDoc of usersSnap.docs) {
-      const userId = userDoc.id;
-      if (userId === currentUserUid) continue; // o‘zingiznikini chiqarma
-
       const data = userDoc.data();
+      userMap[userDoc.id] = data.displayName || "Noma’lum foydalanuvchi";
+
+      if (userDoc.id === currentUserUid) continue; // o‘zingiznikini chiqarma
 
       if (Array.isArray(data.topics)) {
         data.topics.forEach(topic => {
           otherTopics.push({
             ...topic,
-            ownerId: userId
+            ownerId: userDoc.id,
+            ownerName: data.displayName || "Noma’lum foydalanuvchi" // 🔹 displayName qo‘shildi
           });
         });
       }
@@ -810,25 +841,26 @@ function renderOtherTopics(filterText = "") {
   }
 
   filtered.forEach(topic => {
-    const div = document.createElement("div");
-    div.className = "topicCard otherTopic"; // ← style uchun
+  const div = document.createElement("div");
+  div.className = "topicCard otherTopic"; 
 
-    const totalQs = Object.values(topic.questions).reduce(
-      (sum, cat) => sum + (Array.isArray(cat) ? cat.length : 0),
-      0
-    );
+  const totalQs = Object.values(topic.questions).reduce(
+    (sum, cat) => sum + (Array.isArray(cat) ? cat.length : 0),
+    0
+  );
 
-    div.innerHTML = `
-      <strong>${topic.title}</strong>
-      <span>${totalQs} ta savol</span>
-      <small style="opacity:0.7">👤 Boshqa foydalanuvchi</small>
-    `;
+  // 🔹 Bu yerda “Boshqa foydalanuvchi” o‘rniga egasining ismini chiqaramiz
+  div.innerHTML = `
+    <strong>${topic.title}</strong>
+    <span>${totalQs} ta savol</span>
+    <small style="opacity:0.7">👤 ${topic.ownerName}</small>
+  `;
 
-    // 🔹 MUHIM JOY — BOSGANDA KO‘CHIRADI
-    div.onclick = () => copyOtherTopicToMine(topic);
+  div.onclick = () => copyOtherTopicToMine(topic);
 
-    container.appendChild(div);
-  });
+  container.appendChild(div);
+});
+
 }
 
 document.getElementById("otherTopicSearchInput")?.addEventListener("input", e => {
