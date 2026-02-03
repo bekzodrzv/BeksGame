@@ -889,8 +889,27 @@ async function copyOtherTopicToMine(topic) {
 window.copyOtherTopicToMine = copyOtherTopicToMine;
 
 
+document.getElementById("downloadTemplateBtn").onclick = () => {
+    // XLSX kutubxonasi orqali shablon yaratamiz
+    const wb = XLSX.utils.book_new();
 
-window.copyOtherTopicToMine = copyOtherTopicToMine;
+    // Bitta sheet (Questions & Answers)
+     const ws_data = [
+        ["Question", "Answer"], // Header
+        ["Savol matni", "Javob matni"],
+        ["Savol matni", "Javob matni"],
+        ["Savol matni", "Javob matni"],
+        ["Savol matni", "Javob matni"],
+        ["Savol matni", "Javob matni"]
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    XLSX.utils.book_append_sheet(wb, ws, "Shablon");
+
+    // Faylni yuklash
+    XLSX.writeFile(wb, "BeksGame_Shablon.xlsx");
+};
+
 
  
 /* =====================
