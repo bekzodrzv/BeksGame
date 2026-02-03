@@ -943,17 +943,78 @@ select {
   color: red;
 }
 
+/* ====== BOSHQA FOYDALANUVCHI TOPIKLARI ====== */
+
+.otherTopicSearch {
+  margin-top: 20px;
+  text-align: center;
+}
+
+#otherTopicSearchInput {
+  width: 300px;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+/* container — xuddi userTopicPanel kabi */
+#otherTopicPanel {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+  max-height: 350px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+/* card — xuddi siznikidek */
+#otherTopicPanel .topicCard {
+  position: relative;
+  background: #fafafad6;
+  border-radius: 14px;
+  padding: 12px;
+  font-size: 18px;
+  border-left: 4px solid #2563eb; /* boshqalarnikini farqlash uchun ko‘k */
+  cursor: pointer;
+  box-sizing: border-box;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+#otherTopicPanel .topicCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+#otherTopicPanel .topicCard strong {
+  display: block;
+  color: #000000;
+  font-size: 23px;
+  margin-bottom: 6px;
+}
+
+#otherTopicPanel .topicCard span {
+  display: block;
+  font-size: 18px;
+  color: #0f0f0fc0;
+}
+.otherTopic {
+  cursor: pointer;
+  transition: transform .1s, box-shadow .1s;
+}
+
+.otherTopic:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0,0,0,.15);
+}
 
 
 @media(max-width:768px) {
     h1 {
         font-size: 36px;
     }
-
-    .brand-logo {
-    width:40px;   /* kattaroq logo */
-    height: auto;
-   }
 
     .categories {
         grid-template-columns: repeat(2, 1fr);
@@ -1008,5 +1069,4 @@ select {
         padding: 6px 12px;
     }
 }
-
 

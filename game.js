@@ -1,6 +1,15 @@
 import { auth, db } from "./firebase.js";
 import { signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { doc, setDoc, updateDoc, arrayUnion, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import {
+  doc,
+  setDoc,
+  updateDoc,
+  arrayUnion,
+  getDoc,
+  getDocs,
+  collection
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
 
 /* =====================
    LOGOUT
@@ -40,9 +49,12 @@ function getUserDocRef() {
 function getUserTopicsLSKey() {
   return "userTopics_" + currentUserUid;
 }
-function getUserHistoryLSKey() {
-  return "gameHistory_" + currentUserUid;
+function getGameHistoryLSKey() {
+  return currentUserUid
+    ? "gameHistory_" + currentUserUid
+    : "gameHistory_guest";
 }
+
 
 /* =====================
    QUESTIONS HELPERS
@@ -651,19 +663,23 @@ onAuthStateChanged(auth, async (user) => {
     window.location.href = "index.html";
     return;
   }
+
   currentUserUid = user.uid;
-  await loadTopicsSafe();
+console.log("UID:", currentUserUid);
+  await loadTopicsSafe();      // 1️⃣ SIZNING TOPICS
   renderUserTopics();
   restoreLastTopic();
-  await loadGameHistorySafe();
+
+  await loadGameHistorySafe(); // 2️⃣ HISTORY (endi buzilmaydi)
   renderGameHistory();
+
   renderBoard();
+
+  await loadOtherTopics();     // 3️⃣ BOSHQA USER TOPICS (endi yana chiqadi)
 });
 
-// 🔹 (BU SHART!) — loadGameHistorySafe ishlashi uchun
-function getGameHistoryLSKey() {
-  return "gameHistory_" + currentUserUid;
-}
+
+
 
 function resetBoardOnly() {
   const allCells = document.querySelectorAll(".cell");
@@ -743,6 +759,106 @@ function shuffleQuestionsByButton() {
   shuffleTopicQuestions();
 }
 
+let otherTopics = [];
+
+async function loadOtherTopics() {
+  if (!db || !currentUserUid) return;
+
+  otherTopics = [];
+
+  try {
+    const usersSnap = await getDocs(collection(db, "users"));
+
+    for (const userDoc of usersSnap.docs) {
+      const userId = userDoc.id;
+      if (userId === currentUserUid) continue; // o‘zingiznikini chiqarma
+
+      const data = userDoc.data();
+
+      if (Array.isArray(data.topics)) {
+        data.topics.forEach(topic => {
+          otherTopics.push({
+            ...topic,
+            ownerId: userId
+          });
+        });
+      }
+    }
+
+    renderOtherTopics("");
+    console.log("✅ Other topics loaded:", otherTopics);
+
+  } catch (err) {
+    console.error("❌ loadOtherTopics:", err);
+  }
+}
+
+
+function renderOtherTopics(filterText = "") {
+  const container = document.getElementById("otherTopicPanel");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  const filtered = otherTopics.filter(t =>
+    t.title.toLowerCase().includes(filterText.toLowerCase())
+  );
+
+  if (filtered.length === 0) {
+    container.innerHTML = "<p>🔎 Mavzu topilmadi</p>";
+    return;
+  }
+
+  filtered.forEach(topic => {
+    const div = document.createElement("div");
+    div.className = "topicCard otherTopic"; // ← style uchun
+
+    const totalQs = Object.values(topic.questions).reduce(
+      (sum, cat) => sum + (Array.isArray(cat) ? cat.length : 0),
+      0
+    );
+
+    div.innerHTML = `
+      <strong>${topic.title}</strong>
+      <span>${totalQs} ta savol</span>
+      <small style="opacity:0.7">👤 Boshqa foydalanuvchi</small>
+    `;
+
+    // 🔹 MUHIM JOY — BOSGANDA KO‘CHIRADI
+    div.onclick = () => copyOtherTopicToMine(topic);
+
+    container.appendChild(div);
+  });
+}
+
+document.getElementById("otherTopicSearchInput")?.addEventListener("input", e => {
+  renderOtherTopics(e.target.value.trim().toLowerCase());
+});
+
+async function copyOtherTopicToMine(topic) {
+  if (!topic) return;
+
+  const newTopic = {
+    ...topic,
+    id: "topic_" + Date.now(), // 🔹 yangi ID
+    createdAt: Date.now()
+  };
+
+  // Egasi haqidagi ma’lumotni o‘chiramiz (bo‘lsa)
+  delete newTopic.ownerId;
+
+  userTopics.push(newTopic);
+
+  renderUserTopics();
+  await saveTopics();
+
+  alert(`✅ "${topic.title}" mavzusi o‘zingizga ko‘chirildi!`);
+}
+window.copyOtherTopicToMine = copyOtherTopicToMine;
+
+
+
+window.copyOtherTopicToMine = copyOtherTopicToMine;
 
  
 /* =====================
@@ -762,3 +878,5 @@ window.addScore=addScore;
 window.resetBoardOnly=resetBoardOnly;
 window.shuffleTopicQuestions = shuffleTopicQuestions;
 window.shuffleQuestionsByButton = shuffleQuestionsByButton;
+window.loadOtherTopics = loadOtherTopics;
+window.copyOtherTopicToMine = copyOtherTopicToMine;
