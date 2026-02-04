@@ -454,18 +454,18 @@ async function saveGameResult(sortedTeams) {
     console.error("❌ Game history save error:", err);
   }
 
-  // =========================
-  // 3️⃣ UI NI YANGILASH
-  // =========================
-  renderGameHistory();
+
 }
 
 
-function declareWinner() {
+async function declareWinner() {
   if(!teamsData.length) return;
 
   const sorted = [...teamsData].sort((a,b)=>b.score-a.score);
-  saveGameResult(sorted);
+
+  await saveGameResult(sorted);
+  await renderGameHistory();   // 🔥 DARHOL KO‘RINADI
+
   showWinnerModal(sorted);
   gameInProgress=false;
   playWinSound();
@@ -494,6 +494,7 @@ async function loadGameHistorySafe() {
   }
 
   gameHistory = history;
+  renderGameHistory();
 }
 
 
@@ -502,7 +503,7 @@ async function renderGameHistory() {
   const historyBox = document.getElementById("historyList");
   if (!historyBox) return;
 
-  const key = getGameHistoryLSKey();
+  const key = getUserHistoryLSKey(); 
   let gameHistory = JSON.parse(localStorage.getItem(key)) || [];
 
   // 🔹 Agar LocalStorage bo‘sh bo‘lsa — Firebase’dan olamiz
@@ -909,6 +910,16 @@ document.getElementById("downloadTemplateBtn").onclick = () => {
     // Faylni yuklash
     XLSX.writeFile(wb, "BeksGame_Shablon.xlsx");
 };
+// ===== FIX 1: CONFETTI ERROR =====
+function launchConfetti() {
+  console.log("🎉 Confetti fired (dummy)");
+}
+
+// ===== FIX 2: LOCALSTORAGE KEY ERROR =====
+function getUserHistoryLSKey() {
+  const uid = localStorage.getItem("uid") || "guest";
+  return "gameHistory_" + uid;
+}
 
 
  
