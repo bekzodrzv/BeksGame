@@ -1,42 +1,47 @@
-const CACHE_NAME = "beks-game-cache-v1";
-const urlsToCache = [
-  "/",
-  "/index.html",
-  "/game.html",
-  "/index.css",
-  "/game.css",
-  "/game.js",
-  "/firebase.js"
+const CACHE_NAME = "beks-game-v1";
+const ASSETS_TO_CACHE = [
+  "./index.html",
+  "./game.html",
+  "./index.css",
+  "./game.css",
+  "./firebase.js",
+  "./game.js",
+  "./base.js",
+  "./manifest.json",
+  "./icon-192.png",
+  "./icon-512.png"
 ];
 
-// Install event
-self.addEventListener("install", (event) => {
+// Install service worker & cache assets
+self.addEventListener("install", event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log("Caching all: app shell and content");
-        return cache.addAll(urlsToCache);
-      })
+      .then(cache => cache.addAll(ASSETS_TO_CACHE))
+      .then(() => self.skipWaiting())
   );
 });
 
-// Activate event
-self.addEventListener("activate", (event) => {
-  console.log("Service Worker activated");
+// Activate & cleanup old caches
+self.addEventListener("activate", event => {
+  event.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.map(key => {
+        if (key !== CACHE_NAME) return caches.delete(key);
+      }))
+    )
+  );
 });
 
-// Fetch event
-self.addEventListener("fetch", (event) => {
+// Fetch from cache first, fallback to network
+self.addEventListener("fetch", event => {
   event.respondWith(
     caches.match(event.request)
-      .then((cachedResponse) => {
-        return cachedResponse || fetch(event.request)
-          .catch(() => {
-            // fallback HTML agar offline va fayl topilmasa
-            if (event.request.mode === "navigate") {
-              return caches.match("/index.html");
-            }
-          });
+      .then(res => res || fetch(event.request))
+      .catch(() => {
+        // Agar HTML fayl bo‘lsa offline fallback
+        if (event.request.destination === "document") {
+          return caches.match("./index.html");
+        }
       })
   );
 });
