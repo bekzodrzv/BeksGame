@@ -518,77 +518,54 @@ async function renderGameHistory() {
   const key = getUserHistoryLSKey(); 
   let gameHistory = JSON.parse(localStorage.getItem(key)) || [];
 
-  // 🔹 Agar LocalStorage bo‘sh bo‘lsa — Firebase’dan olamiz
-  if (gameHistory.length === 0 && currentUserUid && db) {
-    try {
-      const ref = getUserDocRef();
-      const docSnap = await getDoc(ref);
-
-      if (docSnap.exists() && Array.isArray(docSnap.data().gameHistory)) {
-        gameHistory = docSnap.data().gameHistory;
-        localStorage.setItem(key, JSON.stringify(gameHistory));
-      }
-    } catch (err) {
-      console.error("Firebase’dan history olishda xato:", err);
-    }
-  }
-
+  // 🔹 UI’ni darhol localStorage’dan chizamiz
   historyBox.innerHTML = "";
-
   gameHistory.forEach((game, index) => {
     const div = document.createElement("div");
     div.className = "historyItem";
     div.style.position = "relative";
-
     div.innerHTML = `
       <strong>${index + 1}-o‘yin</strong>
       <span class="date">${new Date(game.date).toLocaleDateString()}</span>
       <span class="time">${new Date(game.date).toLocaleTimeString()}</span>
-      ${game.teams
-        .map(t => `<div class="teamScore">${t.name}: ${t.score}</div>`)
-        .join("")}
+      ${game.teams.map(t => `<div class="teamScore">${t.name}: ${t.score}</div>`).join("")}
     `;
-
-    // ❌ O‘chirish tugmasi (X)
+    // ❌ O‘chirish tugmasi
     const closeBtn = document.createElement("button");
     closeBtn.className = "closeBtn";
     closeBtn.innerText = "×";
-
     closeBtn.onclick = async () => {
       if (!confirm("Bu o‘yin natijasi o‘chirilsinmi?")) return;
-
-      // 1️⃣ Massivdan olib tashlaymiz
       gameHistory.splice(index, 1);
-
-      // 2️⃣ LocalStorage yangilaymiz
       localStorage.setItem(key, JSON.stringify(gameHistory));
-
-      // 3️⃣ Firebase’ni YANGIDAN YOZAMIZ (eng ishonchli usul)
       const ref = getUserDocRef();
-      if (ref) {
-        try {
-          await setDoc(ref, { gameHistory: gameHistory }, { merge: true });
-          console.log("✅ Firebase history yangilandi");
-        } catch (err) {
-          console.error("❌ Firebase history o‘chirishda xato:", err);
-        }
+      if (ref && navigator.onLine) {
+        try { await setDoc(ref, { gameHistory }, { merge: true }); } 
+        catch(e){ console.warn(e); }
       }
-
-      // 4️⃣ UI ni qayta chizamiz
       renderGameHistory();
     };
-
     div.appendChild(closeBtn);
     historyBox.appendChild(div);
   });
+
+  // 🔹 Background: Firebase’dan yangilash (UI’ni bloklamaydi)
+  if (currentUserUid && db && navigator.onLine) {
+    syncOfflineResultsToFirebase().then(() => {
+      // agar Firebase’da yangilik bo‘lsa, localStorage yangilanadi va UI darhol refresh qilinadi
+      const latestHistory = JSON.parse(localStorage.getItem(key)) || [];
+      if (latestHistory.length !== gameHistory.length) renderGameHistory();
+    });
+  }
 }
+
 
 // 🔹 Offline natijalarni online ga yuborish (background)
 async function syncOfflineResultsToFirebase() {
   if (!currentUserUid || !db || !navigator.onLine) return;
 
   const key = getUserHistoryLSKey();
-  let localHistory = JSON.parse(localStorage.getItem(key)) || [];
+  const localHistory = JSON.parse(localStorage.getItem(key)) || [];
   if (!localHistory.length) return;
 
   const ref = getUserDocRef();
@@ -596,7 +573,7 @@ async function syncOfflineResultsToFirebase() {
 
   try {
     const snap = await getDoc(ref);
-    let firebaseHistory = snap.exists() && Array.isArray(snap.data().gameHistory)
+    const firebaseHistory = snap.exists() && Array.isArray(snap.data().gameHistory)
       ? snap.data().gameHistory
       : [];
 
@@ -607,9 +584,11 @@ async function syncOfflineResultsToFirebase() {
       }
     });
 
-    await setDoc(ref, { gameHistory: newHistory }, { merge: true });
-    console.log("✅ Offline natijalar Firebase-ga sinxron qilindi");
-
+    if (newHistory.length !== firebaseHistory.length) {
+      await setDoc(ref, { gameHistory: newHistory }, { merge: true });
+      localStorage.setItem(key, JSON.stringify(newHistory));
+      console.log("✅ Offline natijalar Firebase-ga sinxron qilindi");
+    }
   } catch (err) {
     console.warn("⚠️ Offline natijalarni Firebase-ga yuborishda xato:", err);
   }
