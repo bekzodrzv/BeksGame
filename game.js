@@ -50,10 +50,10 @@ function getUserTopicsLSKey() {
   return "userTopics_" + currentUserUid;
 }
 function getGameHistoryLSKey() {
-  const uid = localStorage.getItem("uid") || currentUserUid || "guest";
-  return "gameHistory_" + uid;
+  return currentUserUid
+    ? "gameHistory_" + currentUserUid
+    : "gameHistory_guest";
 }
-
 
 
 /* =====================
