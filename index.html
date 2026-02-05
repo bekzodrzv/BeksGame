@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Beks Game - Kirish</title>
   <link rel="stylesheet" href="index.css">
-  <link rel="manifest" href="./manifest.json">
 </head>
 <body>
 
@@ -44,12 +43,6 @@
     browserLocalPersistence,
     onAuthStateChanged
   } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-  if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/service-worker.js')
-    .then(() => console.log("✅ Service Worker registered"))
-    .catch(err => console.log("❌ Service Worker registration failed:", err));
-}
 
   // =========================
   // 🔥 1) OFFLINE UCHUN PERSISTENCE
@@ -155,14 +148,6 @@
       // window.location.href = "game.html";
     }
   });
-
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./service-worker.js')
-        .then(reg => console.log('✅ Service Worker registered:', reg))
-        .catch(err => console.error('❌ Service Worker registration failed:', err));
-    });
-  }
 </script>
 
 </body>
