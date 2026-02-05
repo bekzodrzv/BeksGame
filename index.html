@@ -16,6 +16,9 @@
     <input type="email" id="loginEmail" placeholder="Email" required><br><br>
     <input type="password" id="loginPassword" placeholder="Parol" required><br><br>
     <button onclick="loginUser()">Kirish</button>
+    <button onclick="loginOffline()" style="margin-top:10px;">
+  🌐 Offline (Mehmon)
+</button>
     <p>Yoki <span id="showRegister" style="color:blue;cursor:pointer;">Ro‘yxatdan o‘tish</span></p>
   </div>
 
@@ -31,58 +34,121 @@
   </div>
 
   <script type="module">
-    import { auth } from "./firebase.js";
-    import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  import { auth } from "./firebase.js";
+  import { 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword, 
+    updateProfile,
+    setPersistence,
+    browserLocalPersistence,
+    onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-    // Toggle forms
-    document.getElementById("showRegister").onclick = () => {
-      document.getElementById("loginForm").style.display = "none";
-      document.getElementById("registerForm").style.display = "block";
-    };
-    document.getElementById("showLogin").onclick = () => {
-      document.getElementById("registerForm").style.display = "none";
-      document.getElementById("loginForm").style.display = "block";
-    };
+  // =========================
+  // 🔥 1) OFFLINE UCHUN PERSISTENCE
+  // =========================
+  try {
+    await setPersistence(auth, browserLocalPersistence);
+    console.log("✅ Auth persistence yoqildi (offline qo‘llab-quvvatlash)");
+  } catch (e) {
+    console.warn("⚠️ Persistence yoqilmadi:", e);
+  }
 
-    // Login function
-    window.loginUser = async () => {
-      const email = document.getElementById("loginEmail").value.trim();
-      const password = document.getElementById("loginPassword").value;
-      if(!email || !password) return alert("Email va parol kiriting!");
+  // =========================
+  // 🔄 FORM TOGGLE
+  // =========================
+  document.getElementById("showRegister").onclick = () => {
+    document.getElementById("loginForm").style.display = "none";
+    document.getElementById("registerForm").style.display = "block";
+  };
 
-      try {
-        await signInWithEmailAndPassword(auth, email, password);
-        
-        window.location.href = "game.html"; // game sahifaga
-      } catch(e) {
-        console.error(e);
+  document.getElementById("showLogin").onclick = () => {
+    document.getElementById("registerForm").style.display = "none";
+    document.getElementById("loginForm").style.display = "block";
+  };
+
+  // =========================
+  // ✅ LOGIN
+  // =========================
+  window.loginUser = async () => {
+    const email = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPassword").value;
+
+    if (!email || !password) {
+      return alert("Email va parol kiriting!");
+    }
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+
+      // UID ni localStorage ga saqlaymiz (game.js ga kerak)
+      localStorage.setItem("uid", auth.currentUser.uid);
+
+      window.location.href = "game.html";
+    } catch (e) {
+      console.error(e);
+
+      if (e.code === "auth/network-request-failed") {
+        alert("❌ Internet yo‘q!\nAgar oldin shu qurilmada kirgan bo‘lsangiz, qayta urinib ko‘ring.");
+      } else {
         alert("Xato: " + e.message);
       }
-    };
+    }
+  };
 
-    // Register function
-    window.registerUser = async () => {
-      const name = document.getElementById("registerName").value.trim();
-      const email = document.getElementById("registerEmail").value.trim();
-      const password = document.getElementById("registerPassword").value;
-      const passwordConfirm = document.getElementById("registerPasswordConfirm").value;
+  // =========================
+  // ✅ REGISTER
+  // =========================
+  window.registerUser = async () => {
+    const name = document.getElementById("registerName").value.trim();
+    const email = document.getElementById("registerEmail").value.trim();
+    const password = document.getElementById("registerPassword").value;
+    const passwordConfirm = document.getElementById("registerPasswordConfirm").value;
 
-      if(!name || !email || !password || !passwordConfirm)
-        return alert("Barcha maydonlar to‘ldirilishi kerak!");
+    if (!name || !email || !password || !passwordConfirm) {
+      return alert("Barcha maydonlar to‘ldirilishi kerak!");
+    }
 
-      if(password !== passwordConfirm)
-        return alert("Parol va tasdiqlash mos emas!");
+    if (password !== passwordConfirm) {
+      return alert("Parol va tasdiqlash mos emas!");
+    }
 
-      try {
-        const userCred = await createUserWithEmailAndPassword(auth, email, password);
-        await updateProfile(userCred.user, { displayName: name });
-        
-        window.location.href = "game.html"; // game sahifaga
-      } catch(e) {
-        console.error(e);
-        alert("Xato: " + e.message);
-      }
-    };
-  </script>
+    try {
+      const userCred = await createUserWithEmailAndPassword(auth, email, password);
+
+      // Ismni profilga yozamiz
+      await updateProfile(userCred.user, { displayName: name });
+
+      // UID ni localStorage ga saqlaymiz
+      localStorage.setItem("uid", userCred.user.uid);
+
+      window.location.href = "game.html";
+    } catch (e) {
+      console.error(e);
+      alert("Xato: " + e.message);
+    }
+  };
+
+  // =========================
+  // 🔹 OFFLINE (GUEST) MODE
+  // =========================
+  window.loginOffline = () => {
+    localStorage.setItem("uid", "guest_offline");
+    window.location.href = "game.html";
+  };
+
+  // =========================
+  // 🔍 AGAR ALLAQACHON KIRGAN BO‘LSA — AVTOMAT KIRISH
+  // =========================
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      console.log("Oldindan kirilgan user:", user.uid);
+      localStorage.setItem("uid", user.uid);
+      // ixtiyoriy: avtomatik o‘tkazish
+      // window.location.href = "game.html";
+    }
+  });
+</script>
+
 </body>
 </html>

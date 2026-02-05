@@ -423,33 +423,29 @@ function playWinSound() {
   winnerSound.play().catch(()=>{});
 }
 
-
 async function saveGameResult(sortedTeams) {
-  if (!currentUserUid || !db) return;
-
   const result = {
     date: new Date().toISOString(),
     teams: sortedTeams.map(t => ({ name: t.name, score: t.score }))
   };
 
-  // =========================
-  // 1️⃣ LOCAL STORAGE
-  // =========================
+  // 🔹 UID bo‘lmasa mehmon uchun guest
   const key = getUserHistoryLSKey();
   let history = JSON.parse(localStorage.getItem(key)) || [];
   history.push(result);
   localStorage.setItem(key, JSON.stringify(history));
 
-  // 🔹 Global o‘zgaruvchini yangilaymiz
+  // 🔹 Global o‘zgaruvchini yangilash
   gameHistory = history;
 
-  // =========================
-  // 2️⃣ FIREBASE (users/{uid} ichida)
-  // =========================
-  const ref = getUserDocRef();
-  if (!ref) return;
+  // 🔹 Firebase-ga faqat UID bo‘lsa yozamiz
+  if (!currentUserUid || !db) {
+    console.warn("⚠️ Firebase-ga yozilmadi (offline yoki mehmon)");
+    return;
+  }
 
   try {
+    const ref = getUserDocRef();
     const snap = await getDoc(ref);
 
     if (snap.exists()) {
@@ -457,51 +453,50 @@ async function saveGameResult(sortedTeams) {
         gameHistory: arrayUnion(result)
       });
     } else {
-      await setDoc(ref, {
-        gameHistory: [result]
-      });
+      await setDoc(ref, { gameHistory: [result] });
     }
 
     console.log("✅ Game history Firebase-ga saqlandi");
+
   } catch (err) {
-    console.error("❌ Game history save error:", err);
+    console.error("❌ Game history save error (offline yoki xato):", err);
   }
-
-
 }
+
 
 
 async function declareWinner() {
-  if(!teamsData.length) return;
+  if (!teamsData.length) return;
 
-  const sorted = [...teamsData].sort((a,b)=>b.score-a.score);
+  const sorted = [...teamsData].sort((a, b) => b.score - a.score);
 
+  // 1️⃣ Natijani saqlaymiz (offline ham ishlaydi)
   await saveGameResult(sorted);
-  await renderGameHistory();   // 🔥 DARHOL KO‘RINADI
 
+  // 2️⃣ Darhol LocalStorage’dan yoki globaldan render qilamiz
+  renderGameHistory();
+
+  // 3️⃣ Winner modal va confetti
   showWinnerModal(sorted);
-  gameInProgress=false;
+  gameInProgress = false;
   playWinSound();
   launchConfetti();
 }
-
 async function loadGameHistorySafe() {
-  if (!currentUserUid || !db) return;
-
   const key = getGameHistoryLSKey();
-
-  // 1️⃣ AVVAL LOCAL (tez)
   let history = JSON.parse(localStorage.getItem(key)) || [];
+
+  // Avval LocalStorage’dan ko‘rsatamiz
   gameHistory = history;
   renderGameHistory();
   console.log("📥 Game history LOCAL’dan ko‘rsatildi:", history);
 
-  // 2️⃣ KEYIN (BACKGROUND) FIREBASE
-  const ref = getUserDocRef();
-  if (!ref) return;
-
-  (async () => {
+  // Agar online va foydalanuvchi login bo‘lgan bo‘lsa Firebase’dan yangilaymiz
+  if (navigator.onLine && currentUserUid && db) {
     try {
+      const ref = getUserDocRef();
+      if (!ref) return;
+
       const snap = await getDoc(ref);
       if (snap.exists() && Array.isArray(snap.data().gameHistory)) {
         history = snap.data().gameHistory;
@@ -513,8 +508,11 @@ async function loadGameHistorySafe() {
     } catch (err) {
       console.warn("⚠️ Firebase history kechikdi yoki offline:", err);
     }
-  })();
+  } else {
+    console.log("⚠️ Offline yoki mehmon, faqat LocalStorage ishlatilmoqda");
+  }
 }
+
 
 
 
@@ -590,6 +588,44 @@ async function renderGameHistory() {
     historyBox.appendChild(div);
   });
 }
+
+async function syncOfflineResultsToFirebase() {
+  if (!currentUserUid || !db) return;
+
+  const key = getUserHistoryLSKey();
+  let localHistory = JSON.parse(localStorage.getItem(key)) || [];
+
+  if (!localHistory.length) return; // offline natija yo‘q
+
+  const ref = getUserDocRef();
+  if (!ref) return;
+
+  try {
+    const snap = await getDoc(ref);
+    let firebaseHistory = [];
+
+    if (snap.exists() && Array.isArray(snap.data().gameHistory)) {
+      firebaseHistory = snap.data().gameHistory;
+    }
+
+    // 🔹 Local natijalarni Firebase’ga qo‘shamiz
+    const newHistory = [...firebaseHistory];
+
+    localHistory.forEach(result => {
+      // duplicate bo‘lmasligi uchun tekshirish mumkin
+      if (!firebaseHistory.find(r => r.date === result.date)) {
+        newHistory.push(result);
+      }
+    });
+
+    await setDoc(ref, { gameHistory: newHistory }, { merge: true });
+    console.log("✅ Offline natijalar Firebase-ga sinxron qilindi");
+
+  } catch (err) {
+    console.error("❌ Offline natijalarni Firebase-ga yuborishda xato:", err);
+  }
+}
+
 
 
 
@@ -687,18 +723,20 @@ onAuthStateChanged(auth, async (user) => {
 
   currentUserUid = user.uid;
   localStorage.setItem("uid", currentUserUid);
-  console.log("UID:", currentUserUid);
 
-  await loadTopicsSafe();      // ✅ AVVAL LOCAL, KEYIN FIREBASE
+  // 🔹 Offline natijalarni Firebase-ga yuboramiz
+  await syncOfflineResultsToFirebase();
+
+  await loadTopicsSafe();
   renderUserTopics();
   restoreLastTopic();
 
-  await loadGameHistorySafe(); // ✅ AVVAL LOCAL, KEYIN FIREBASE
-
+  await loadGameHistorySafe();
   renderBoard();
 
   await loadOtherTopics();
 });
+
 
 
 // Account modal
