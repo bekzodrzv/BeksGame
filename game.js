@@ -50,10 +50,10 @@ function getUserTopicsLSKey() {
   return "userTopics_" + currentUserUid;
 }
 function getGameHistoryLSKey() {
-  return currentUserUid
-    ? "gameHistory_" + currentUserUid
-    : "gameHistory_guest";
+  const uid = localStorage.getItem("uid") || currentUserUid || "guest";
+  return "gameHistory_" + uid;
 }
+
 
 
 /* =====================
@@ -666,17 +666,18 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   currentUserUid = user.uid;
-console.log("UID:", currentUserUid);
-  await loadTopicsSafe();      // 1️⃣ SIZNING TOPICS
+  localStorage.setItem("uid", currentUserUid); // 🔥 YANGI QATOR
+  console.log("UID:", currentUserUid);
+
+  await loadTopicsSafe();      
   renderUserTopics();
   restoreLastTopic();
 
-  await loadGameHistorySafe(); // 2️⃣ HISTORY (endi buzilmaydi)
-  renderGameHistory();
+  await loadGameHistorySafe(); // ✅ BU YERDA ICHIDA RENDER BOR
 
   renderBoard();
 
-  await loadOtherTopics();     // 3️⃣ BOSHQA USER TOPICS (endi yana chiqadi)
+  await loadOtherTopics();
 });
 
 // Account modal
