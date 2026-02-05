@@ -86,28 +86,41 @@ async function saveTopics() {
 }
 
 async function loadTopicsSafe() {
+  // 1️⃣ AVVAL LOCAL (tez!)
   userTopics = [];
   const localData = localStorage.getItem(getUserTopicsLSKey());
   if (localData) {
-    try { userTopics = JSON.parse(localData); } catch { userTopics = []; }
+    try {
+      userTopics = JSON.parse(localData);
+    } catch {
+      userTopics = [];
+    }
   }
 
+  console.log("📥 Topics LOCAL’dan yuklandi:", userTopics);
+
+  // 2️⃣ KEYIN (BACKGROUND) FIREBASE — xalaqit bermaydi
   const ref = getUserDocRef();
   if (!ref) return;
-  try {
-    const snap = await getDoc(ref);
-    if (snap.exists()) {
-      const fbTopics = snap.data().topics;
-      if (Array.isArray(fbTopics)) {
-        userTopics = fbTopics;
-        localStorage.setItem(getUserTopicsLSKey(), JSON.stringify(fbTopics));
+
+  (async () => {
+    try {
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        const fbTopics = snap.data().topics;
+        if (Array.isArray(fbTopics)) {
+          userTopics = fbTopics;
+          localStorage.setItem(getUserTopicsLSKey(), JSON.stringify(fbTopics));
+          renderUserTopics(); // 🔥 YANGI — UI ni yangilaydi
+          console.log("📥 Topics Firebase’dan yangilandi:", userTopics);
+        }
       }
+    } catch (e) {
+      console.warn("⚠️ Topic load (Firebase) kechikdi yoki offline:", e);
     }
-    console.log("📥 Topics from Firebase:", userTopics);
-  } catch (e) {
-    console.error("Topic load error:", e);
-  }
+  })();
 }
+
 
 function renderUserTopics() {
   const container = document.getElementById("userTopicPanel");
@@ -476,26 +489,33 @@ async function loadGameHistorySafe() {
   if (!currentUserUid || !db) return;
 
   const key = getGameHistoryLSKey();
-  let history = [];
 
-  try {
-    const ref = getUserDocRef();
-    const snap = await getDoc(ref);
-
-    if (snap.exists() && Array.isArray(snap.data().gameHistory)) {
-      history = snap.data().gameHistory;
-      localStorage.setItem(key, JSON.stringify(history)); // localga ham yozamiz
-      console.log("📥 Game history Firebase’dan yuklandi:", history);
-    } else {
-      console.log("ℹ️ Firebase’da history yo‘q");
-    }
-  } catch (err) {
-    console.error("Firebase’dan history olishda xato:", err);
-  }
-
+  // 1️⃣ AVVAL LOCAL (tez)
+  let history = JSON.parse(localStorage.getItem(key)) || [];
   gameHistory = history;
   renderGameHistory();
+  console.log("📥 Game history LOCAL’dan ko‘rsatildi:", history);
+
+  // 2️⃣ KEYIN (BACKGROUND) FIREBASE
+  const ref = getUserDocRef();
+  if (!ref) return;
+
+  (async () => {
+    try {
+      const snap = await getDoc(ref);
+      if (snap.exists() && Array.isArray(snap.data().gameHistory)) {
+        history = snap.data().gameHistory;
+        localStorage.setItem(key, JSON.stringify(history));
+        gameHistory = history;
+        renderGameHistory(); // 🔥 UI ni yangilaymiz
+        console.log("📥 Game history Firebase’dan yangilandi:", history);
+      }
+    } catch (err) {
+      console.warn("⚠️ Firebase history kechikdi yoki offline:", err);
+    }
+  })();
 }
+
 
 
 
@@ -666,19 +686,20 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   currentUserUid = user.uid;
-  localStorage.setItem("uid", currentUserUid); // 🔥 YANGI QATOR
+  localStorage.setItem("uid", currentUserUid);
   console.log("UID:", currentUserUid);
 
-  await loadTopicsSafe();      
+  await loadTopicsSafe();      // ✅ AVVAL LOCAL, KEYIN FIREBASE
   renderUserTopics();
   restoreLastTopic();
 
-  await loadGameHistorySafe(); // ✅ BU YERDA ICHIDA RENDER BOR
+  await loadGameHistorySafe(); // ✅ AVVAL LOCAL, KEYIN FIREBASE
 
   renderBoard();
 
   await loadOtherTopics();
 });
+
 
 // Account modal
 const accountBtn = document.getElementById("accountBtn");
