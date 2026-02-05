@@ -427,7 +427,8 @@ function playWinSound() {
 async function saveGameResult(sortedTeams) {
   const result = {
     date: new Date().toISOString(),
-    teams: sortedTeams.map(t => ({ name: t.name, score: t.score }))
+    teams: sortedTeams.map(t => ({ name: t.name, score: t.score })),
+    synced: false  // offline bo‘lsa keyin sync qilamiz
   };
 
   const key = getUserHistoryLSKey();
@@ -435,26 +436,49 @@ async function saveGameResult(sortedTeams) {
   history.push(result);
   localStorage.setItem(key, JSON.stringify(history));
 
-  gameHistory = history; // global UI uchun
+  gameHistory = history;
 
-  // 🔹 Firebase background sync, lekin offline bo‘lsa xato chiqaradi
-  if (currentUserUid && db && navigator.onLine) {
-    const ref = getUserDocRef();
-    if (!ref) return;
-
+  // 🔹 FIREBASE GA sinx
+  if (navigator.onLine && currentUserUid && db) {
     try {
-      const snap = await getDoc(ref);
-      if (snap.exists()) {
-        await updateDoc(ref, { gameHistory: arrayUnion(result) });
-      } else {
-        await setDoc(ref, { gameHistory: [result] });
-      }
-      console.log("✅ Game history Firebase-ga saqlandi");
-    } catch (err) {
-      console.warn("⚠️ Firebase save kechikdi, offline yoki xato:", err);
+      const ref = getUserDocRef();
+      await updateDoc(ref, { 
+        gameHistory: arrayUnion(result)
+      });
+      // sync flag
+      result.synced = true;
+      localStorage.setItem(key, JSON.stringify(history));
+      console.log("✅ Offline paytda saqlangan result Firebase-ga sync qilindi");
+    } catch(err) {
+      console.warn("⚠️ Firebase sync xato:", err);
     }
   }
 }
+window.addEventListener("online", async () => {
+  console.log("🌐 Internet qayta ulandi, offline natijalarni sync qilamiz...");
+
+  const key = getUserHistoryLSKey();
+  let history = JSON.parse(localStorage.getItem(key)) || [];
+
+  const unsynced = history.filter(r => !r.synced);
+  if (!unsynced.length) return;
+
+  const ref = getUserDocRef();
+  if (!ref) return;
+
+  for (const r of unsynced) {
+    try {
+      await updateDoc(ref, { gameHistory: arrayUnion(r) });
+      r.synced = true;
+    } catch(err) {
+      console.warn("⚠️ Offline result Firebase-ga yuborilmadi:", err);
+    }
+  }
+
+  localStorage.setItem(key, JSON.stringify(history));
+  console.log("✅ Offline natijalar Firebase-ga sync qilindi");
+});
+
 
 
 

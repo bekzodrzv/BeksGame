@@ -44,6 +44,12 @@
     onAuthStateChanged
   } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
+  if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/service-worker.js')
+    .then(() => console.log("✅ Service Worker registered"))
+    .catch(err => console.log("❌ Service Worker registration failed:", err));
+}
+
   // =========================
   // 🔥 1) OFFLINE UCHUN PERSISTENCE
   // =========================
