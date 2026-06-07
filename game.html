@@ -76,13 +76,23 @@
   </div>
   <div class="teams" id="teams"></div>
 
- 
+ <div class="settingsBox">
+  <label>Ball:</label>
+  <input type="number" id="pointStepInput" value="100" min="1">
+
+  <label>Rejim:</label>
+  <select id="pointModeSelect">
+    <option value="fixed">Bir xil</option>
+    <option value="progressive">100-200-300</option>
+  </select>
+
+  <button onclick="updatePointSettings()">Saqlash</button>
+</div>
   
   <!-- TOPIC PANEL (MUSTAQIL) -->
 <div id="userTopicPanel"></div>
 
 
-<div id="board"></div>
 
 <h2>Boshqa foydalanuvchilar mavzulari</h2>
 
@@ -111,7 +121,6 @@
 <input type="number" id="timerInput" min="1" max="300" value="10">
 <button class="bigBtn" onclick="updateTimer()">O‘zgartirish</button>
 </div>
-
 
   <!-- Winner Modal -->
   <div id="winnerModal">
