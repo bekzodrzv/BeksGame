@@ -1,5 +1,11 @@
 import { auth, db } from "./firebase.js";
-import { signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+import {
+  signOut,
+  onAuthStateChanged,
+  updateProfile
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
 import {
   doc,
   setDoc,
@@ -7,9 +13,10 @@ import {
   arrayUnion,
   getDoc,
   getDocs,
-  collection
+  collection,
+  query,
+  where
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
 
 /* =====================
    LOGOUT
@@ -17,6 +24,8 @@ import {
 document.getElementById("logoutBtn")?.addEventListener("click", () => {
   signOut(auth).then(() => window.location.href = "index.html");
 });
+
+
 
 /* =====================
    GLOBAL STATE
@@ -34,6 +43,149 @@ let userTimer = 10;
 let timer, timeLeft;
 let currentUserTopicId = null;
 let userTopics = [];
+let pointStep = 100;
+let participants = [];
+let selectedParticipant = null;
+let pointMode = "fixed"; // default
+
+function initSettings() {
+  const savedStep = localStorage.getItem("pointStep");
+  const savedMode = localStorage.getItem("pointMode");
+
+  if (savedStep) pointStep = parseInt(savedStep);
+  if (savedMode) pointMode = savedMode;
+
+  document.getElementById("pointStepInput").value = pointStep;
+  document.getElementById("pointModeSelect").value = pointMode;
+}
+
+function updatePointSettings() {
+
+  const step = parseInt(
+    document.getElementById("pointStepInput").value
+  );
+
+  const mode =
+    document.getElementById("pointModeSelect").value;
+
+  if (isNaN(step) || step < 1) {
+    alert("Ball noto'g'ri!");
+    return;
+  }
+
+  pointStep = step;
+  pointMode = mode;
+
+  localStorage.setItem("pointStep", pointStep);
+  localStorage.setItem("pointMode", pointMode);
+
+  renderBoard();
+
+  alert("Saqlandi ✅");
+}
+
+
+window.updatePointSettings = updatePointSettings;
+
+function renderStatsChart() {
+  const ctx = document.getElementById("statsChart");
+
+  const labels = participants.map(p => p.name);
+  const wins = participants.map(p => p.wins);
+
+  new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{
+        label: "G‘alabalar",
+        data: wins
+      }]
+    }
+  });
+}
+
+function updatePointStep() {
+  const input = document.getElementById("pointStepInput");
+  const value = parseInt(input.value);
+
+  if (isNaN(value) || value <= 0) return;
+
+  pointStep = value;
+
+  // 🔥 MUHIM: boardni qayta chizish
+  renderBoard();
+}
+window.updatePointStep = updatePointStep;
+pointStep = parseInt(localStorage.getItem("pointStep")) || 100;
+
+async function saveParticipants() {
+  localStorage.setItem("participants", JSON.stringify(participants));
+
+  const ref = getUserDocRef();
+  if (ref) {
+    await setDoc(ref, { participants }, { merge: true });
+  }
+}
+async function loadParticipants() {
+  const local = localStorage.getItem("participants");
+  if (local) participants = JSON.parse(local);
+
+  const ref = getUserDocRef();
+  if (ref) {
+    const snap = await getDoc(ref);
+    if (snap.exists() && snap.data().participants) {
+      participants = snap.data().participants;
+    }
+  }
+
+  renderParticipants();
+}
+
+function addParticipant() {
+  const name = prompt("Ism kiriting:");
+  if (!name) return;
+
+  participants.push({
+    id: Date.now(),
+    name,
+    wins: 0,
+    games: 0
+  });
+const winnerName = sorted[0].name;
+
+participants.forEach(p => {
+  p.games++;
+  if (p.name === winnerName) p.wins++;
+});
+saveParticipants();
+  saveParticipants();
+  renderParticipants();
+}
+
+function renderParticipants() {
+  const box = document.getElementById("participantsBox");
+  box.innerHTML = "";
+
+  participants.forEach(p => {
+    const div = document.createElement("div");
+    div.className = "participant";
+
+    div.innerText = p.name;
+
+    div.onclick = () => {
+      selectedParticipant = p;
+      alert(p.name + " tanlandi");
+    };
+
+    box.appendChild(div);
+  });
+}
+function addSelectedParticipantToTeam() {
+  if (!selectedParticipant) return alert("Ishtirokchi tanlanmagan!");
+
+  addTeamWithName(selectedParticipant.name);
+}
 
 /* =====================
    FIRESTORE HELPERS
@@ -170,8 +322,12 @@ async function addUserTopic() {
   input.value = "";
   renderUserTopics();
   await saveTopics();
-  alert("Mavzu qo‘shildi ✅");
+await loadOtherTopics();
+renderOtherTopics("");
+alert("Mavzu qo‘shildi ✅");
+
 }
+
 
 function selectUserTopic(topicId) {
   const topic = userTopics.find(t => t.id === topicId);
@@ -251,6 +407,10 @@ async function importExcelForUserTopic() {
     alert("Excel muvaffaqiyatli yuklandi!");
   };
   reader.readAsArrayBuffer(file);
+  await saveTopics();
+
+await loadOtherTopics();
+renderOtherTopics("");
 }
 
 /* =====================
@@ -259,21 +419,36 @@ async function importExcelForUserTopic() {
 function renderBoard() {
   const board = document.getElementById("board");
   board.innerHTML = "";
+
   const qCategories = Object.values(questions);
   const maxRows = Math.max(...qCategories.map(c => c.length));
 
   for (let r = 0; r < maxRows; r++) {
     for (let c = 0; c < 5; c++) {
+
       const category = qCategories[c] || [];
       const item = category[r];
+
       const cell = document.createElement("div");
       cell.className = "cell";
+
       if (item) {
-        cell.innerText = (r + 1) * 100;
-        cell.onclick = () => openQ(cell, item);
+
+        let score;
+
+        if (pointMode === "fixed") {
+          score = pointStep;
+        } else {
+          score = (r + 1) * pointStep;
+        }
+
+        cell.innerText = score;
+        cell.onclick = () => openQ(cell, item, score);
+
       } else {
         cell.classList.add("used");
       }
+
       board.appendChild(cell);
     }
   }
@@ -286,7 +461,8 @@ let currentQuestionMultiplier = 1;
 const clickSound = document.getElementById("clickSound");
 const winnerSound = document.getElementById("winnerSound");
 
-function openQ(cell, item) {
+function openQ(cell, item, score) {
+  console.log("Score:", score);
   gameInProgress = true;
   if (cell.classList.contains("used")) return;
   currentCell = cell;
@@ -431,7 +607,7 @@ async function saveGameResult(sortedTeams) {
     synced: false  // offline bo‘lsa keyin sync qilamiz
   };
 
-  const key = getUserHistoryLSKey();
+  const key = getGameHistoryLSKey();
   let history = JSON.parse(localStorage.getItem(key)) || [];
   history.push(result);
   localStorage.setItem(key, JSON.stringify(history));
@@ -457,7 +633,7 @@ async function saveGameResult(sortedTeams) {
 window.addEventListener("online", async () => {
   console.log("🌐 Internet qayta ulandi, offline natijalarni sync qilamiz...");
 
-  const key = getUserHistoryLSKey();
+  const key = getGameHistoryLSKey();
   let history = JSON.parse(localStorage.getItem(key)) || [];
 
   const unsynced = history.filter(r => !r.synced);
@@ -508,7 +684,7 @@ async function loadGameHistorySafe() {
   gameHistory = history;
   renderGameHistory();
   console.log("📥 Game history LOCAL’dan ko‘rsatildi:", history);
-
+sorted[0].winner = true;
   // Agar online va foydalanuvchi login bo‘lgan bo‘lsa Firebase’dan yangilaymiz
   if (navigator.onLine && currentUserUid && db) {
     try {
@@ -539,7 +715,7 @@ async function renderGameHistory() {
   const historyBox = document.getElementById("historyList");
   if (!historyBox) return;
 
-  const key = getUserHistoryLSKey(); 
+  const key = getGameHistoryLSKey(); 
   let gameHistory = JSON.parse(localStorage.getItem(key)) || [];
 
   // 🔹 UI’ni darhol localStorage’dan chizamiz
@@ -573,14 +749,6 @@ async function renderGameHistory() {
     historyBox.appendChild(div);
   });
 
-  // 🔹 Background: Firebase’dan yangilash (UI’ni bloklamaydi)
-  if (currentUserUid && db && navigator.onLine) {
-    syncOfflineResultsToFirebase().then(() => {
-      // agar Firebase’da yangilik bo‘lsa, localStorage yangilanadi va UI darhol refresh qilinadi
-      const latestHistory = JSON.parse(localStorage.getItem(key)) || [];
-      if (latestHistory.length !== gameHistory.length) renderGameHistory();
-    });
-  }
 }
 
 
@@ -588,7 +756,7 @@ async function renderGameHistory() {
 async function syncOfflineResultsToFirebase() {
   if (!currentUserUid || !db || !navigator.onLine) return;
 
-  const key = getUserHistoryLSKey();
+  const key = getGameHistoryLSKey();
   const localHistory = JSON.parse(localStorage.getItem(key)) || [];
   if (!localHistory.length) return;
 
@@ -609,7 +777,7 @@ async function syncOfflineResultsToFirebase() {
     });
 
     if (newHistory.length !== firebaseHistory.length) {
-      await setDoc(ref, { gameHistory: newHistory }, { merge: true });
+      await setDoc(ref, { gameHistory: arrayUnion(result) }, { merge: true });
       localStorage.setItem(key, JSON.stringify(newHistory));
       console.log("✅ Offline natijalar Firebase-ga sinxron qilindi");
     }
@@ -725,6 +893,7 @@ onAuthStateChanged(auth, async (user) => {
   restoreLastTopic();
 
   await loadGameHistorySafe();
+  initSettings();
   renderBoard();
 
   await loadOtherTopics();
@@ -748,17 +917,35 @@ window.closeAccountModal = () => {
 };
 
 // Saqlash tugmasi
+
 saveProfileBtn.onclick = async () => {
-    const newName = displayNameInput.value.trim();
-    if (!newName) return alert("Iltimos, ism kiriting!");
-    try {
-        await updateDoc(getUserDocRef(), { displayName: newName });
-        
-        accountModal.style.display = "none";
-    } catch (err) {
-        console.error("❌ Profil saqlashda xato:", err);
-        alert("Xatolik yuz berdi!");
-    }
+  const newName = displayNameInput.value.trim();
+
+  if (!newName) {
+    alert("Iltimos ism kiriting!");
+    return;
+  }
+
+  try {
+
+    await updateProfile(auth.currentUser, {
+      displayName: newName
+    });
+
+    await updateDoc(getUserDocRef(), {
+      displayName: newName
+    });
+
+    accountModal.style.display = "none";
+
+    alert("Profil saqlandi ✅");
+
+  } catch (err) {
+
+    console.error(err);
+    alert("Xatolik yuz berdi");
+
+  }
 };
 
 
@@ -777,7 +964,15 @@ function resetBoardOnly() {
 
     // Haqiqiy savol bor yoki yo‘qligini tekshiramiz
     if (qCategories[col] && qCategories[col][row]) {
-      cell.innerText = (row + 1) * 100;
+      let score;
+
+if (pointMode === "fixed") {
+  score = pointStep;
+} else {
+  score = (row + 1) * pointStep;
+}
+
+cell.innerText = score;
     } else {
       cell.innerText = "";
       cell.classList.add("used"); // bo‘sh katakni ishlatilgan deb belgilaymiz
@@ -820,7 +1015,7 @@ function shuffleTopicQuestions() {
   }
 
   // 3️⃣ 5 kategoriya bo‘yicha qayta taqsimlash
-  const newQuestions = [{}, {}, {}, {}, {}]; // Excel import qilingan shaklga mos
+  const newQuestions = [[], [], [], [], []]; // Excel import qilingan shaklga mos
   for (let i = 0; i < 5; i++) newQuestions[i] = [];
 
   allQuestions.forEach((q, idx) => {
@@ -830,6 +1025,15 @@ function shuffleTopicQuestions() {
 
   // 4️⃣ Global questions massivini yangilash
   questions = newQuestions;
+
+  const topic = userTopics.find(
+  t => t.id === currentUserTopicId
+);
+
+if (topic) {
+  topic.questions = newQuestions;
+  saveTopics();
+}
 
   // 5️⃣ Board ni qayta chizamiz
   renderBoard();
@@ -963,16 +1167,12 @@ document.getElementById("downloadTemplateBtn").onclick = () => {
     // Faylni yuklash
     XLSX.writeFile(wb, "BeksGame_Shablon.xlsx");
 };
-// ===== FIX 1: CONFETTI ERROR =====
-function launchConfetti() {
-  console.log("🎉 Confetti fired (dummy)");
-}
 
 // ===== FIX 2: LOCALSTORAGE KEY ERROR =====
-function getUserHistoryLSKey() {
+/*function getGameHistoryLSKey() {
   const uid = localStorage.getItem("uid") || "guest";
   return "gameHistory_" + uid;
-}
+}*/
 
 
  
