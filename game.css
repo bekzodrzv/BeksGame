@@ -392,7 +392,12 @@ h1 {
   gap: 12px;
   margin: 30px auto 20px;
   flex-wrap: wrap;
-  position: relative;
+}
+
+.settingsBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 #teamNameInput {
@@ -411,43 +416,33 @@ h1 {
 }
 
 /* TEAM QO‘SHISH BUTTON */
-.shBtn {
-  position: absolute;   /* container ichida absolute */
-  right: 10px;             /* o‘ngdan 0 px */
-  top: 50%;             /* vertikal markazlash */
-  transform: translateY(-50%); /* mukammal vertikal markazlash */
-  
-  padding: 10px 20px;
-  font-size: 15px;
-  font-weight: 600;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  color: #070707;
-  background: linear-gradient(135deg, #ffffff, #e1e1e1);
-  transition: 0.3s ease;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+
+.teamAdd {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin: 20px 0;
 }
 
-.shBtn:hover {
-  transform: translateY(-50%) translateY(-2px); /* hoverda biroz ko‘tarish */
-  box-shadow: 0 8px 20px rgba(0,0,0,0.5);
-  background: linear-gradient(135deg, #fffefe, #e3e3e3);
+.leftControls,
+.centerControls,
+.rightControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
-.teamAdd .bigBtn {
-  padding: 12px 18px;
-  font-size: 16px;
-  font-weight: 700;
 
-  border-radius: 12px;
-  border: none;
-  cursor: pointer;
+.centerControls {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
 
-  background: linear-gradient(135deg, #60a5fa, #3b82f6);
-  color: #fff;
-
-  box-shadow: 0 8px 22px rgba(59,130,246,0.35);
-  transition: all 0.25s ease;
+.settingsBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .teamAdd .bigBtn:hover {
@@ -1112,9 +1107,12 @@ select {
 
     /* board kataklari 2 ta qatorda */
     .board {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 5px;
-    }
+    min-width: 600px;
+}
+
+body {
+    overflow-x: auto;
+}
     .cell {
         font-size: 22px;
         padding: 16px 0;

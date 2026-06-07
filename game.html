@@ -70,24 +70,39 @@
 
   <!-- Teams -->
   <div class="teamAdd">
+
+  <!-- CHAP -->
+  <div class="leftControls">
+    <div class="settingsBox">
+      <label>Ball:</label>
+      <input type="number" id="pointStepInput" value="100" min="1">
+
+      <label>Rejim:</label>
+      <select id="pointModeSelect">
+        <option value="fixed">Bir xil</option>
+        <option value="progressive">100-200-300</option>
+      </select>
+
+      <button onclick="updatePointSettings()">Saqlash</button>
+    </div>
+  </div>
+
+  <!-- O'RTA -->
+  <div class="centerControls">
     <input type="text" id="teamNameInput" placeholder="Team nomi">
     <button class="bigBtn" onclick="addTeam()">Team qo‘shish</button>
-    <button class="shBtn" onclick="shuffleQuestionsByButton()">🔀 Savolarni Aralashtrish</button>
   </div>
+
+  <!-- O'NG -->
+  <div class="rightControls">
+    <button class="shBtn" onclick="shuffleQuestionsByButton()">
+      🔀 Savollarni aralashtirish
+    </button>
+  </div>
+
+</div>
   <div class="teams" id="teams"></div>
 
- <div class="settingsBox">
-  <label>Ball:</label>
-  <input type="number" id="pointStepInput" value="100" min="1">
-
-  <label>Rejim:</label>
-  <select id="pointModeSelect">
-    <option value="fixed">Bir xil</option>
-    <option value="progressive">100-200-300</option>
-  </select>
-
-  <button onclick="updatePointSettings()">Saqlash</button>
-</div>
   
   <!-- TOPIC PANEL (MUSTAQIL) -->
 <div id="userTopicPanel"></div>
@@ -121,6 +136,7 @@
 <input type="number" id="timerInput" min="1" max="300" value="10">
 <button class="bigBtn" onclick="updateTimer()">O‘zgartirish</button>
 </div>
+
 
   <!-- Winner Modal -->
   <div id="winnerModal">
