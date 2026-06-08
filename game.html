@@ -87,10 +87,14 @@
     </div>
   </div>
 
-  <!-- O'RTA -->
+  <!-- O'RTA team qo`shish tugmasi eskisi--> 
   <div class="centerControls">
-    <input type="text" id="teamNameInput" placeholder="Team nomi">
-    <button class="bigBtn" onclick="addTeam()">Team qo‘shish</button>
+    <!--<input type="text" id="teamNameInput" placeholder="Team nomi">
+    <button class="bigBtn" onclick="addTeam()">Team qo‘shish</button>-->
+
+    <button class="bigBtn" onclick="addParticipant()">
+  🧑 Ishtirokchi qo‘shish
+</button>
   </div>
 
   <!-- O'NG -->
@@ -102,6 +106,14 @@
 
 </div>
   <div class="teams" id="teams"></div>
+<!-- 🧑‍🤝‍🧑 ISHTIROKCHILAR LISTI -->
+ <div class="participantsHeader">
+  <button id="toggleParticipantsBtn" class="bigBtn">
+    👥 Barchasini ko‘rsatish
+  </button>
+</div>
+
+<div id="participantsBox" class="participantsBox"></div>
 
   
   <!-- TOPIC PANEL (MUSTAQIL) -->

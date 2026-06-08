@@ -17,6 +17,136 @@ body {
 /* ----------------------
    GLOBAL FORM ELEMENTS
 ------------------------ */
+
+
+/* ===== PARTICIPANTS GRID ===== */
+.participantsBox {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  padding: 5px;
+
+  max-height: 100px; /* 1 qator */
+  overflow: hidden;
+
+  transition: max-height .3s ease;
+}
+
+.participantsBox.expanded {
+  max-height: 5000px;
+}
+
+/* ===== CARD ===== */
+.participant {
+  position: relative;
+
+  display: flex;
+  flex-direction: column;   /* 🔥 MUHIM: vertical layout */
+  gap: 6px;
+
+  padding: 12px 12px 10px;
+  border-radius: 12px;
+
+  background: rgba(113,113,113,.74);
+  backdrop-filter: blur(10px);
+
+  color: #fff;
+
+  transition: .2s;
+}
+
+.participant:hover {
+  transform: translateY(-2px);
+  background: rgba(60,59,59,.73);
+}
+
+/* ===== TOP ROW (RANK + BUTTONS) ===== */
+.participantTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* ===== RANK ===== */
+.rank {
+  width: 34px;
+  height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 8px;
+
+  background: #ffd54f;
+  color: #222;
+
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* ===== ACTION BUTTONS ===== */
+.participantActions {
+  display: flex;
+  gap: 5px;
+}
+
+.participantActions button {
+  width: 24px;
+  height: 24px;
+
+  border: none;
+  border-radius: 50%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+  font-size: 12px;
+
+  transition: .2s;
+}
+
+/* colors */
+.editParticipant {
+  background: #ffb300;
+  color: #000;
+}
+
+.mergeParticipant {
+  background: #2196f3;
+  color: #fff;
+}
+
+.deleteParticipant {
+  background: #ff3b30;
+  color: #fff;
+}
+
+/* hover */
+.participantActions button:hover {
+  transform: scale(1.15);
+}
+
+/* ===== INFO (NAME + STATS) ===== */
+.info {
+  display: flex;
+  flex-direction: column;
+}
+
+.name {
+  font-weight: 700;
+  font-size: 17px;
+
+  /* 🔥 ism tepada turadi */
+}
+
+.stats {
+  font-size: 14px;
+  opacity: .85;
+}
+
 /* Har bir control blok */
 .topicControls,
 .shuffleControls,
@@ -485,12 +615,14 @@ h1 {
 }
 
 /* TEAM NOMI */
-.team strong {
-  display: block;
-  font-size: 18px;
-  font-weight: 800;
-  margin-bottom: 6px;
-  color: #1f2937;
+.participant strong {
+  font-size: 16px;
+  color: #fff;
+}
+
+.participant small {
+  color: #aaa;
+  font-size: 13px;
 }
 
 /* SCORE */

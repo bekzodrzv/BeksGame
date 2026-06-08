@@ -48,6 +48,14 @@ let participants = [];
 let selectedParticipant = null;
 let pointMode = "fixed"; // default
 
+function normalizeName(name) {
+  return name
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .replace(/[^\w]/g, "");
+}
+
+
 function initSettings() {
   const savedStep = localStorage.getItem("pointStep");
   const savedMode = localStorage.getItem("pointMode");
@@ -120,31 +128,175 @@ window.updatePointStep = updatePointStep;
 pointStep = parseInt(localStorage.getItem("pointStep")) || 100;
 
 async function saveParticipants() {
-  localStorage.setItem("participants", JSON.stringify(participants));
+  localStorage.setItem(
+    PARTICIPANTS_KEY(),
+    JSON.stringify(participants)
+  );
 
   const ref = getUserDocRef();
-  if (ref) {
+  if (!ref) return;
+
+  try {
     await setDoc(ref, { participants }, { merge: true });
+  } catch (e) {
+    console.warn(e);
   }
 }
-async function loadParticipants() {
-  const local = localStorage.getItem("participants");
-  if (local) participants = JSON.parse(local);
+
+function updateParticipantsStats(sortedTeams) {
+  if (!participants.length) return;
+
+  const winnerName = sortedTeams[0].name;
+
+  participants = participants.map(p => {
+    const isInGame = sortedTeams.find(t => t.name === p.name);
+
+    if (!isInGame) return p;
+
+    return {
+      ...p,
+      games: (p.games || 0) + 1,
+      wins: p.name === winnerName ? (p.wins || 0) + 1 : (p.wins || 0)
+    };
+  });
+
+  saveParticipants();
+  renderParticipants();
+}
+
+function recalculateStatsFromHistory() {
+  if (!Array.isArray(gameHistory)) return;
+
+  const stats = {};
+
+  gameHistory.forEach(game => {
+    if (!Array.isArray(game.teams)) return;
+
+    const sorted = [...game.teams].sort((a, b) => b.score - a.score);
+    const winner = sorted[0];
+
+    game.teams.forEach(team => {
+
+      const key = normalizeName(team.name);
+
+      if (!stats[key]) {
+        stats[key] = {
+          id: key,
+          name: team.name,
+          wins: 0,
+          games: 0
+        };
+      }
+
+      stats[key].games++;
+
+      if (normalizeName(team.name) === normalizeName(winner.name)) {
+        stats[key].wins++;
+      }
+    });
+  });
+
+  participants = Object.values(stats);
+
+  saveParticipants();
+  renderParticipants();
+}
+window.editParticipant = async function(oldName) {
+
+  const newName = prompt("Yangi ism:", oldName);
+  if (!newName) return;
+
+  const clean = newName.trim();
+  if (!clean) return;
+
+  const oldKey = normalizeName(oldName);
+  const newKey = normalizeName(clean);
+
+  // 1. participants update
+  const p = findParticipant(oldName);
+  if (p) p.name = clean;
+
+  // 2. gameHistory update
+  gameHistory.forEach(game => {
+    if (!Array.isArray(game.teams)) return;
+
+    game.teams.forEach(t => {
+      if (normalizeName(t.name) === oldKey) {
+        t.name = clean;
+      }
+    });
+  });
+
+  // 3. rebuild stats (ENG TO‘G‘RI YO‘L)
+  recalculateStatsFromHistory();
+
+  // 4. save
+  await saveParticipants();
+
+  localStorage.setItem(getGameHistoryLSKey(), JSON.stringify(gameHistory));
 
   const ref = getUserDocRef();
   if (ref) {
-    const snap = await getDoc(ref);
-    if (snap.exists() && snap.data().participants) {
-      participants = snap.data().participants;
+    await setDoc(ref, {
+      participants,
+      gameHistory
+    }, { merge: true });
+  }
+
+  // 5. UI
+  renderParticipants();
+  renderGameHistory();
+
+  alert("Ism yangilandi ✅");
+};
+
+async function loadParticipants() {
+  participants = [];
+
+  // 1️⃣ LOCAL
+  const local = localStorage.getItem(PARTICIPANTS_KEY());
+  if (local) {
+    try {
+      participants = JSON.parse(local);
+    } catch {
+      participants = [];
     }
   }
 
   renderParticipants();
+
+  // 2️⃣ FIREBASE SYNC
+  const ref = getUserDocRef();
+  if (!ref) return;
+
+  try {
+    const snap = await getDoc(ref);
+
+    if (snap.exists() && Array.isArray(snap.data().participants)) {
+      participants = snap.data().participants;
+
+      localStorage.setItem(
+        PARTICIPANTS_KEY(),
+        JSON.stringify(participants)
+      );
+
+      renderParticipants();
+    }
+  } catch (e) {
+    console.warn("loadParticipants error:", e);
+  }
+  console.log(participants);
 }
 
 function addParticipant() {
   const name = prompt("Ism kiriting:");
   if (!name) return;
+
+  // ❗ duplicate oldini olish
+  if (participants.find(p => p.name === name)) {
+    alert("Bu ishtirokchi allaqachon mavjud!");
+    return;
+  }
 
   participants.push({
     id: Date.now(),
@@ -152,39 +304,252 @@ function addParticipant() {
     wins: 0,
     games: 0
   });
-const winnerName = sorted[0].name;
 
-participants.forEach(p => {
-  p.games++;
-  if (p.name === winnerName) p.wins++;
-});
-saveParticipants();
   saveParticipants();
   renderParticipants();
 }
 
 function renderParticipants() {
   const box = document.getElementById("participantsBox");
+  if (!box) return;
+
   box.innerHTML = "";
 
-  participants.forEach(p => {
+  const sorted = [...participants].sort((a, b) => b.wins - a.wins);
+
+  sorted.forEach((p, index) => {
+
+    const winRate = p.games
+      ? Math.round((p.wins / p.games) * 100)
+      : 0;
+
     const div = document.createElement("div");
     div.className = "participant";
 
-    div.innerText = p.name;
+    div.innerHTML = `
+  <div class="participantTop">
+    <div class="rank">${index + 1}</div>
 
-    div.onclick = () => {
-      selectedParticipant = p;
-      alert(p.name + " tanlandi");
+    <div class="participantActions">
+      <button class="editParticipant">✏️</button>
+      <button class="mergeParticipant">🔗</button>
+      <button class="deleteParticipant">×</button>
+    </div>
+  </div>
+
+  <div class="info">
+    <div class="name">${p.name}</div>
+    <div class="stats">
+      🎮 ${p.games} | 🏆 ${p.wins} | 📊 ${winRate}%
+    </div>
+  </div>
+`;
+
+    // =========================
+    // 🔥 CLICK = ADD TO GAME
+    // =========================
+    div.addEventListener("click", () => {
+      addTeamWithName(p.name);
+    });
+
+    // =========================
+    // ✏️ EDIT
+    // =========================
+    div.querySelector(".editParticipant").onclick = async (e) => {
+      e.stopPropagation();
+
+      if (typeof window.editParticipant === "function") {
+        window.editParticipant(p.name);
+      }
+    };
+
+    // =========================
+    // 🔗 MERGE
+    // =========================
+    div.querySelector(".mergeParticipant").onclick = async (e) => {
+      e.stopPropagation();
+
+      const targetName = prompt(
+        `"${p.name}" ni qaysi ism bilan birlashtirasiz?`
+      );
+
+      if (!targetName) return;
+      if (targetName === p.name) return;
+
+      await mergeParticipants(p.name, targetName.trim());
+    };
+
+    // =========================
+    // ❌ DELETE
+    // =========================
+    div.querySelector(".deleteParticipant").onclick = async (e) => {
+      e.stopPropagation();
+
+      if (!confirm(`"${p.name}" ni o‘chirasizmi?`)) return;
+
+      participants = participants.filter(
+        item => item.name !== p.name
+      );
+
+      gameHistory.forEach(game => {
+        if (Array.isArray(game.teams)) {
+          game.teams = game.teams.filter(
+            team => team.name !== p.name
+          );
+        }
+      });
+
+      gameHistory = gameHistory.filter(
+        game => game.teams && game.teams.length > 0
+      );
+
+      localStorage.setItem(
+        getGameHistoryLSKey(),
+        JSON.stringify(gameHistory)
+      );
+
+      localStorage.setItem(
+        PARTICIPANTS_KEY(),
+        JSON.stringify(participants)
+      );
+
+      const ref = getUserDocRef();
+      if (ref) {
+        try {
+          await setDoc(ref, { participants, gameHistory }, { merge: true });
+        } catch (err) {
+          console.warn(err);
+        }
+      }
+
+      renderParticipants();
+      renderGameHistory();
     };
 
     box.appendChild(div);
   });
 }
-function addSelectedParticipantToTeam() {
-  if (!selectedParticipant) return alert("Ishtirokchi tanlanmagan!");
 
-  addTeamWithName(selectedParticipant.name);
+async function mergeParticipants(oldName, newName) {
+
+  if (!oldName || !newName) return;
+
+  gameHistory.forEach(game => {
+
+    if (!Array.isArray(game.teams)) return;
+
+    game.teams.forEach(team => {
+
+      if (team.name === oldName) {
+        team.name = newName;
+      }
+
+    });
+
+  });
+
+  localStorage.setItem(
+    getGameHistoryLSKey(),
+    JSON.stringify(gameHistory)
+  );
+
+  recalculateStatsFromHistory();
+
+  const ref = getUserDocRef();
+
+  if (ref) {
+
+    try {
+
+      await setDoc(ref,{
+        gameHistory,
+        participants
+      },{merge:true});
+
+    } catch(err){
+      console.warn(err);
+    }
+
+  }
+
+  renderParticipants();
+  renderGameHistory();
+
+  alert("Ismlar birlashtirildi ✅");
+}
+
+
+
+function addSelectedParticipantToTeam(participant) {
+  if (!participant) return;
+
+  // duplicate oldini olish (optional)
+  const exists = teamsData.find(t => t.name === participant.name);
+  if (exists) {
+    alert("Bu ishtirokchi allaqachon qo‘shilgan!");
+    return;
+  }
+
+  addTeamWithName(participant.name);
+}
+function addTeamWithName(name) {
+
+  // bir odamni 2 marta qo‘shmaslik
+  const exists = teamsData.find(
+    t => t.name === name
+  );
+
+  if (exists) {
+    alert("Bu ishtirokchi allaqachon qo‘shilgan!");
+    return;
+  }
+
+  teamCount++;
+
+  const teamId = teamCount;
+
+  teamsData.push({
+    id: teamId,
+    name,
+    score: 0
+  });
+
+  const div = document.createElement("div");
+  div.className = "team";
+  div.id = "team_" + teamId;
+
+  div.innerHTML = `
+    ${name}<br>
+
+    <span id="t${teamId}">0</span>
+
+    <div class="scoreBtns">
+      <button onclick="addScore(${teamId},1)">+</button>
+      <button onclick="addScore(${teamId},-1)">-</button>
+    </div>
+  `;
+
+  // ❌ TEAMNI O'CHIRISH
+  const closeBtn = document.createElement("button");
+
+  closeBtn.className = "closeBtn";
+  closeBtn.innerText = "×";
+
+  closeBtn.onclick = (e) => {
+
+    e.stopPropagation();
+
+    teamsData = teamsData.filter(
+      t => t.id !== teamId
+    );
+
+    div.remove();
+  };
+
+  div.appendChild(closeBtn);
+
+  document.getElementById("teams")
+    .appendChild(div);
 }
 
 /* =====================
@@ -664,47 +1029,86 @@ async function declareWinner() {
 
   const sorted = [...teamsData].sort((a, b) => b.score - a.score);
 
-  // 1️⃣ Natijani saqlaymiz (offline ham ishlaydi)
+  // 🥇 WINNER UPDATE (ENG MUHIM QISM)
+  updateParticipantsStats(sorted);
+
   await saveGameResult(sorted);
 
-  // 2️⃣ Darhol LocalStorage’dan yoki globaldan render qilamiz
   renderGameHistory();
-
-  // 3️⃣ Winner modal va confetti
   showWinnerModal(sorted);
   gameInProgress = false;
   playWinSound();
   launchConfetti();
 }
 async function loadGameHistorySafe() {
-  const key = getGameHistoryLSKey();
-  let history = JSON.parse(localStorage.getItem(key)) || [];
 
-  // Avval LocalStorage’dan ko‘rsatamiz
+  const key = getGameHistoryLSKey();
+
+  let history =
+    JSON.parse(localStorage.getItem(key)) || [];
+
+  // 🔥 LOCAL HISTORY
   gameHistory = history;
+
+  // 🔥 Historydan participant statistikani qayta hisoblash
+  recalculateStatsFromHistory();
+
   renderGameHistory();
-  console.log("📥 Game history LOCAL’dan ko‘rsatildi:", history);
-sorted[0].winner = true;
-  // Agar online va foydalanuvchi login bo‘lgan bo‘lsa Firebase’dan yangilaymiz
+
+  console.log(
+    "📥 Game history LOCAL’dan ko‘rsatildi:",
+    history
+  );
+
+  // 🔥 Firebase mavjud bo'lsa yangilash
   if (navigator.onLine && currentUserUid && db) {
+
     try {
+
       const ref = getUserDocRef();
+
       if (!ref) return;
 
       const snap = await getDoc(ref);
-      if (snap.exists() && Array.isArray(snap.data().gameHistory)) {
+
+      if (
+        snap.exists() &&
+        Array.isArray(snap.data().gameHistory)
+      ) {
+
         history = snap.data().gameHistory;
-        localStorage.setItem(key, JSON.stringify(history));
+
+        localStorage.setItem(
+          key,
+          JSON.stringify(history)
+        );
+
         gameHistory = history;
-        renderGameHistory(); // 🔥 UI ni yangilaymiz
-        console.log("📥 Game history Firebase’dan yangilandi:", history);
+
+        // 🔥 Firebase historydan ham qayta hisoblash
+        recalculateStatsFromHistory();
+
+        renderGameHistory();
+
+        console.log(
+          "📥 Game history Firebase’dan yangilandi:",
+          history
+        );
       }
+
     } catch (err) {
-      console.warn("⚠️ Firebase history kechikdi yoki offline:", err);
+
+      console.warn(
+        "⚠️ Firebase history kechikdi yoki offline:",
+        err
+      );
+
     }
-  } else {
-    console.log("⚠️ Offline yoki mehmon, faqat LocalStorage ishlatilmoqda");
   }
+
+  // 🔥 Ekranni majburiy yangilash
+  renderParticipants();
+
 }
 
 
@@ -885,6 +1289,8 @@ onAuthStateChanged(auth, async (user) => {
   currentUserUid = user.uid;
   localStorage.setItem("uid", currentUserUid);
 
+  await loadParticipants(); // 🔥 SHU BO'LISHI SHART
+
   // 🔹 Offline natijalarni Firebase-ga yuboramiz
   await syncOfflineResultsToFirebase();
 
@@ -896,8 +1302,16 @@ onAuthStateChanged(auth, async (user) => {
   initSettings();
   renderBoard();
 
+  
+
   await loadOtherTopics();
+  // 🔥 SHU YANGI QATORLARNI QO‘SH
+  await loadParticipants();   // <<< MUHIM
+  renderParticipants();       // <<< MUHIM
 });
+function PARTICIPANTS_KEY() {
+  return "participants_" + (currentUserUid || "guest");
+}
 
 
 
@@ -1174,7 +1588,47 @@ document.getElementById("downloadTemplateBtn").onclick = () => {
   return "gameHistory_" + uid;
 }*/
 
+// ===== PARTICIPANTS TOGGLE =====
 
+function updateParticipantsToggleButton() {
+
+  const btn =
+    document.getElementById("toggleParticipantsBtn");
+
+  const box =
+    document.getElementById("participantsBox");
+
+  if (!btn || !box) return;
+
+  const count = participants.length;
+
+  const expanded =
+    box.classList.contains("expanded");
+
+  btn.innerText = expanded
+    ? `👥 ${count} ishtirokchi ▲`
+    : `👥 ${count} ishtirokchi ▼`;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  const btn =
+    document.getElementById("toggleParticipantsBtn");
+
+  const box =
+    document.getElementById("participantsBox");
+
+  if (!btn || !box) return;
+
+  btn.addEventListener("click", () => {
+
+    box.classList.toggle("expanded");
+
+    updateParticipantsToggleButton();
+
+  });
+
+});
  
 /* =====================
    EXPORT TO WINDOW
@@ -1195,3 +1649,7 @@ window.shuffleTopicQuestions = shuffleTopicQuestions;
 window.shuffleQuestionsByButton = shuffleQuestionsByButton;
 window.loadOtherTopics = loadOtherTopics;
 window.copyOtherTopicToMine = copyOtherTopicToMine;
+window.addParticipant = addParticipant;
+window.renderStatsChart = renderStatsChart;
+window.recalculateStatsFromHistory = recalculateStatsFromHistory;
+window.addSelectedParticipantToTeam = addSelectedParticipantToTeam;
