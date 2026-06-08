@@ -146,7 +146,7 @@ async function saveParticipants() {
 function updateParticipantsStats(sortedTeams) {
   if (!participants.length) return;
 
-  const winnerName = sortedTeams[0].name;
+ 
 
   participants = participants.map(p => {
     const isInGame = sortedTeams.find(t => t.name === p.name);
@@ -1030,7 +1030,7 @@ async function declareWinner() {
   const sorted = [...teamsData].sort((a, b) => b.score - a.score);
 
   // 🥇 WINNER UPDATE (ENG MUHIM QISM)
-  updateParticipantsStats(sorted);
+  
 
   await saveGameResult(sorted);
 
@@ -1041,76 +1041,40 @@ async function declareWinner() {
   launchConfetti();
 }
 async function loadGameHistorySafe() {
-
   const key = getGameHistoryLSKey();
+  let history = JSON.parse(localStorage.getItem(key)) || [];
 
-  let history =
-    JSON.parse(localStorage.getItem(key)) || [];
-
-  // 🔥 LOCAL HISTORY
   gameHistory = history;
-
-  // 🔥 Historydan participant statistikani qayta hisoblash
-  recalculateStatsFromHistory();
-
   renderGameHistory();
 
-  console.log(
-    "📥 Game history LOCAL’dan ko‘rsatildi:",
-    history
-  );
+  console.log("📥 Game history LOCAL’dan ko‘rsatildi:", history);
 
-  // 🔥 Firebase mavjud bo'lsa yangilash
   if (navigator.onLine && currentUserUid && db) {
-
     try {
-
       const ref = getUserDocRef();
-
       if (!ref) return;
 
       const snap = await getDoc(ref);
 
-      if (
-        snap.exists() &&
-        Array.isArray(snap.data().gameHistory)
-      ) {
-
+      if (snap.exists() && Array.isArray(snap.data().gameHistory)) {
         history = snap.data().gameHistory;
 
-        localStorage.setItem(
-          key,
-          JSON.stringify(history)
-        );
-
+        localStorage.setItem(key, JSON.stringify(history));
         gameHistory = history;
 
-        // 🔥 Firebase historydan ham qayta hisoblash
-        recalculateStatsFromHistory();
-
         renderGameHistory();
-
-        console.log(
-          "📥 Game history Firebase’dan yangilandi:",
-          history
-        );
+        console.log("📥 Game history Firebase’dan yangilandi:", history);
       }
-
     } catch (err) {
-
-      console.warn(
-        "⚠️ Firebase history kechikdi yoki offline:",
-        err
-      );
-
+      console.warn("⚠️ Firebase history xato:", err);
     }
   }
 
-  // 🔥 Ekranni majburiy yangilash
+  // ❌ BU YERDA sorted YO‘Q BO‘LADI, SHUNI O‘CHIR
+  // ❌ stats ishlatma bu functionda
+
   renderParticipants();
-
 }
-
 
 
 
