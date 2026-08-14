@@ -143,25 +143,60 @@ async function saveParticipants() {
   }
 }
 
-function updateParticipantsStats(sortedTeams) {
-  if (!participants.length) return;
+async function updateParticipantsStats(sortedTeams) {
+  if (!Array.isArray(sortedTeams) || sortedTeams.length === 0) {
+    return;
+  }
 
- 
+  if (!Array.isArray(participants) || participants.length === 0) {
+    return;
+  }
 
-  participants = participants.map(p => {
-    const isInGame = sortedTeams.find(t => t.name === p.name);
+  // 🥇 G'olib
+  const winner = sortedTeams[0];
 
-    if (!isInGame) return p;
+  if (!winner) return;
+
+  const winnerParticipantId = winner.participantId;
+
+  // 🔥 Faqat shu o'yinda qatnashgan participantlar
+  const playedParticipantIds = new Set(
+    sortedTeams
+      .filter(team => team.participantId != null)
+      .map(team => String(team.participantId))
+  );
+
+  participants = participants.map(participant => {
+
+    const participantId = String(participant.id);
+
+    // Bu o'yinda qatnashmagan
+    if (!playedParticipantIds.has(participantId)) {
+      return participant;
+    }
+
+    const isWinner =
+      winnerParticipantId != null &&
+      String(winnerParticipantId) === participantId;
 
     return {
-      ...p,
-      games: (p.games || 0) + 1,
-      wins: p.name === winnerName ? (p.wins || 0) + 1 : (p.wins || 0)
+      ...participant,
+
+      games: (participant.games || 0) + 1,
+
+      wins: isWinner
+        ? (participant.wins || 0) + 1
+        : (participant.wins || 0)
     };
   });
 
-  saveParticipants();
+  // LocalStorage + Firebase
+  await saveParticipants();
+
+  // UI
   renderParticipants();
+
+  console.log("📊 Participant statistikasi yangilandi:", participants);
 }
 
 function recalculateStatsFromHistory() {
@@ -309,6 +344,33 @@ function addParticipant() {
   renderParticipants();
 }
 
+window.addEventListener("online", async () => {
+
+  console.log(
+    "🌐 Internet qayta ulandi. Firebase sync boshlanmoqda..."
+  );
+
+  try {
+
+    // 1️⃣ Game history
+    await syncGameHistoryToFirebase();
+
+    // 2️⃣ Participant statistics
+    await saveParticipants();
+
+    console.log(
+      "✅ Barcha ma'lumot Firebase'ga sinxron qilindi"
+    );
+
+  } catch (error) {
+
+    console.warn(
+      "⚠️ Online sync xatosi:",
+      error
+    );
+  }
+});
+
 function renderParticipants() {
   const box = document.getElementById("participantsBox");
   if (!box) return;
@@ -348,9 +410,9 @@ function renderParticipants() {
     // =========================
     // 🔥 CLICK = ADD TO GAME
     // =========================
-    div.addEventListener("click", () => {
-      addTeamWithName(p.name);
-    });
+  div.addEventListener("click", () => {
+  addTeamWithParticipant(p);
+});
 
     // =========================
     // ✏️ EDIT
@@ -483,24 +545,23 @@ async function mergeParticipants(oldName, newName) {
 function addSelectedParticipantToTeam(participant) {
   if (!participant) return;
 
-  // duplicate oldini olish (optional)
-  const exists = teamsData.find(t => t.name === participant.name);
-  if (exists) {
-    alert("Bu ishtirokchi allaqachon qo‘shilgan!");
+  addTeamWithParticipant(participant);
+}
+
+
+function addTeamWithParticipant(participant) {
+  if (!participant || !participant.id) {
+    alert("Ishtirokchi ma'lumoti topilmadi!");
     return;
   }
 
-  addTeamWithName(participant.name);
-}
-function addTeamWithName(name) {
-
-  // bir odamni 2 marta qo‘shmaslik
+  // Bir participant bir o'yinga ikki marta qo'shilmasin
   const exists = teamsData.find(
-    t => t.name === name
+    team => String(team.participantId) === String(participant.id)
   );
 
   if (exists) {
-    alert("Bu ishtirokchi allaqachon qo‘shilgan!");
+    alert(`"${participant.name}" allaqachon o'yinga qo'shilgan!`);
     return;
   }
 
@@ -508,35 +569,49 @@ function addTeamWithName(name) {
 
   const teamId = teamCount;
 
-  teamsData.push({
+  const team = {
     id: teamId,
-    name,
+
+    // 🔥 ENG MUHIM
+    participantId: participant.id,
+
+    name: participant.name,
+
     score: 0
-  });
+  };
+
+  teamsData.push(team);
 
   const div = document.createElement("div");
+
   div.className = "team";
   div.id = "team_" + teamId;
 
   div.innerHTML = `
-    ${name}<br>
+    <strong>${participant.name}</strong><br>
 
     <span id="t${teamId}">0</span>
 
     <div class="scoreBtns">
-      <button onclick="addScore(${teamId},1)">+</button>
-      <button onclick="addScore(${teamId},-1)">-</button>
+      <button
+        class="plusBtn"
+        onclick="addScore(${teamId}, 1)"
+      >+</button>
+
+      <button
+        class="minusBtn"
+        onclick="addScore(${teamId}, -1)"
+      >−</button>
     </div>
   `;
 
-  // ❌ TEAMNI O'CHIRISH
+  // Teamni o'chirish
   const closeBtn = document.createElement("button");
 
   closeBtn.className = "closeBtn";
   closeBtn.innerText = "×";
 
   closeBtn.onclick = (e) => {
-
     e.stopPropagation();
 
     teamsData = teamsData.filter(
@@ -548,8 +623,7 @@ function addTeamWithName(name) {
 
   div.appendChild(closeBtn);
 
-  document.getElementById("teams")
-    .appendChild(div);
+  document.getElementById("teams").appendChild(div);
 }
 
 /* =====================
@@ -936,23 +1010,50 @@ function addTeam() {
 }
 
 function addScore(id, sign) {
-  const team = teamsData.find(t => t.id === id);
-  if(!team) return;
 
-  // Agar minus bo'lsa multiplikatorni 1 deb olamiz
-  const multiplier = sign > 0 ? currentQuestionMultiplier : 1;
-  const points = currentValue * multiplier * sign;
+  if (!gameInProgress) {
+    return;
+  }
+
+  const team = teamsData.find(
+    t => t.id === id
+  );
+
+  if (!team) return;
+
+  // Minusda bonus ishlamasin
+  const multiplier =
+    sign > 0
+      ? currentQuestionMultiplier
+      : 1;
+
+  const points =
+    currentValue *
+    multiplier *
+    sign;
+
   team.score += points;
 
-  const el = document.getElementById("t"+id);
-  if(el) el.innerText = team.score;
+  const el =
+    document.getElementById("t" + id);
 
-  // Qo‘shishdan keyin multiplikatorni reset qilamiz
+  if (el) {
+    el.innerText = team.score;
+  }
+
+  // Bonusni reset
   currentQuestionMultiplier = 1;
 
-  const all = document.querySelectorAll(".cell").length;
-  const used = document.querySelectorAll(".cell.used").length;
-  if(all===used) declareWinner();
+  // Board holati
+  const all =
+    document.querySelectorAll(".cell").length;
+
+  const used =
+    document.querySelectorAll(".cell.used").length;
+
+  if (all > 0 && all === used) {
+    declareWinner();
+  }
 }
 
 /* =====================
@@ -966,80 +1067,214 @@ function playWinSound() {
 
 // 🔹 Natijalarni saqlash (offline ham ishlaydi)
 async function saveGameResult(sortedTeams) {
+
   const result = {
+    id: "game_" + Date.now(),
+
     date: new Date().toISOString(),
-    teams: sortedTeams.map(t => ({ name: t.name, score: t.score })),
-    synced: false  // offline bo‘lsa keyin sync qilamiz
+
+    teams: sortedTeams.map(team => ({
+      id: team.id,
+
+      // 🔥 Participant bilan bog'lanish
+      participantId: team.participantId || null,
+
+      name: team.name,
+
+      score: team.score
+    })),
+
+    synced: false
   };
 
   const key = getGameHistoryLSKey();
-  let history = JSON.parse(localStorage.getItem(key)) || [];
+
+  let history =
+    JSON.parse(localStorage.getItem(key)) || [];
+
+  // Yangi o'yin
   history.push(result);
-  localStorage.setItem(key, JSON.stringify(history));
+
+  // LocalStorage
+  localStorage.setItem(
+    key,
+    JSON.stringify(history)
+  );
 
   gameHistory = history;
 
-  // 🔹 FIREBASE GA sinx
-  if (navigator.onLine && currentUserUid && db) {
-    try {
-      const ref = getUserDocRef();
-      await updateDoc(ref, { 
-        gameHistory: arrayUnion(result)
-      });
-      // sync flag
-      result.synced = true;
-      localStorage.setItem(key, JSON.stringify(history));
-      console.log("✅ Offline paytda saqlangan result Firebase-ga sync qilindi");
-    } catch(err) {
-      console.warn("⚠️ Firebase sync xato:", err);
-    }
-  }
+  // Firebase
+  await syncGameHistoryToFirebase();
+
+  return result;
 }
-window.addEventListener("online", async () => {
-  console.log("🌐 Internet qayta ulandi, offline natijalarni sync qilamiz...");
 
-  const key = getGameHistoryLSKey();
-  let history = JSON.parse(localStorage.getItem(key)) || [];
+async function syncGameHistoryToFirebase() {
 
-  const unsynced = history.filter(r => !r.synced);
-  if (!unsynced.length) return;
+  if (!currentUserUid || !db || !navigator.onLine) {
+    return false;
+  }
 
   const ref = getUserDocRef();
-  if (!ref) return;
 
-  for (const r of unsynced) {
-    try {
-      await updateDoc(ref, { gameHistory: arrayUnion(r) });
-      r.synced = true;
-    } catch(err) {
-      console.warn("⚠️ Offline result Firebase-ga yuborilmadi:", err);
+  if (!ref) return false;
+
+  const key = getGameHistoryLSKey();
+
+  const localHistory =
+    JSON.parse(localStorage.getItem(key)) || [];
+
+  try {
+
+    const snap = await getDoc(ref);
+
+    const firebaseHistory =
+      snap.exists() &&
+      Array.isArray(snap.data().gameHistory)
+        ? snap.data().gameHistory
+        : [];
+
+    const mergedHistory = [
+      ...firebaseHistory
+    ];
+
+    // Local historyni Firebase history bilan birlashtiramiz
+    for (const localGame of localHistory) {
+
+      const exists = mergedHistory.some(
+        firebaseGame =>
+          firebaseGame.id === localGame.id ||
+          firebaseGame.date === localGame.date
+      );
+
+      if (!exists) {
+        mergedHistory.push(localGame);
+      }
     }
+
+    // Firebase'ga to'liq yangilangan history
+    await setDoc(
+      ref,
+      {
+        gameHistory: mergedHistory
+      },
+      {
+        merge: true
+      }
+    );
+
+    // Sync flag
+    const updatedLocalHistory =
+      localHistory.map(game => ({
+        ...game,
+        synced: true
+      }));
+
+    localStorage.setItem(
+      key,
+      JSON.stringify(updatedLocalHistory)
+    );
+
+    gameHistory = updatedLocalHistory;
+
+    console.log(
+      "✅ Game history Firebase bilan sinxronlandi"
+    );
+
+    return true;
+
+  } catch (error) {
+
+    console.warn(
+      "⚠️ Game history Firebase sync xato:",
+      error
+    );
+
+    return false;
   }
-
-  localStorage.setItem(key, JSON.stringify(history));
-  console.log("✅ Offline natijalar Firebase-ga sync qilindi");
-});
-
+}
 
 
 
 
 async function declareWinner() {
-  if (!teamsData.length) return;
 
-  const sorted = [...teamsData].sort((a, b) => b.score - a.score);
+  // O'yin allaqachon tugagan bo'lsa qayta ishlamasin
+  if (!teamsData.length || !gameInProgress) {
+    return;
+  }
 
-  // 🥇 WINNER UPDATE (ENG MUHIM QISM)
-  
-
-  await saveGameResult(sorted);
-
-  renderGameHistory();
-  showWinnerModal(sorted);
+  // 🔒 Darhol false qilish
+  // bir nechta click sabab 2 marta statistikaga qo'shilishining oldini oladi
   gameInProgress = false;
-  playWinSound();
-  launchConfetti();
+
+  // Ball bo'yicha saralash
+  const sorted = [...teamsData].sort(
+    (a, b) => b.score - a.score
+  );
+
+  const winner = sorted[0];
+
+  console.log("🥇 WINNER:", winner);
+
+  try {
+
+    // =================================
+    // 1️⃣ GAME HISTORY
+    // =================================
+
+    await saveGameResult(sorted);
+
+
+    // =================================
+    // 2️⃣ PARTICIPANT STATISTICS
+    // =================================
+
+    await updateParticipantsStats(sorted);
+
+
+    // =================================
+    // 3️⃣ UI HISTORY
+    // =================================
+
+    renderGameHistory();
+
+
+    // =================================
+    // 4️⃣ WINNER MODAL
+    // =================================
+
+    showWinnerModal(sorted);
+
+
+    // =================================
+    // 5️⃣ SOUND
+    // =================================
+
+    playWinSound();
+
+
+    // =================================
+    // 6️⃣ CONFETTI
+    // =================================
+
+    launchConfetti();
+
+
+    console.log(
+      "✅ O'yin to'liq yakunlandi"
+    );
+
+  } catch (error) {
+
+    console.error(
+      "❌ O'yin natijasini saqlashda xato:",
+      error
+    );
+
+  }
 }
+
 async function loadGameHistorySafe() {
   const key = getGameHistoryLSKey();
   let history = JSON.parse(localStorage.getItem(key)) || [];
@@ -1122,35 +1357,31 @@ async function renderGameHistory() {
 
 // 🔹 Offline natijalarni online ga yuborish (background)
 async function syncOfflineResultsToFirebase() {
-  if (!currentUserUid || !db || !navigator.onLine) return;
 
-  const key = getGameHistoryLSKey();
-  const localHistory = JSON.parse(localStorage.getItem(key)) || [];
-  if (!localHistory.length) return;
-
-  const ref = getUserDocRef();
-  if (!ref) return;
+  if (
+    !currentUserUid ||
+    !db ||
+    !navigator.onLine
+  ) {
+    return;
+  }
 
   try {
-    const snap = await getDoc(ref);
-    const firebaseHistory = snap.exists() && Array.isArray(snap.data().gameHistory)
-      ? snap.data().gameHistory
-      : [];
 
-    const newHistory = [...firebaseHistory];
-    localHistory.forEach(r => {
-      if (!firebaseHistory.find(f => f.date === r.date)) {
-        newHistory.push(r);
-      }
-    });
+    await syncGameHistoryToFirebase();
 
-    if (newHistory.length !== firebaseHistory.length) {
-      await setDoc(ref, { gameHistory: arrayUnion(result) }, { merge: true });
-      localStorage.setItem(key, JSON.stringify(newHistory));
-      console.log("✅ Offline natijalar Firebase-ga sinxron qilindi");
-    }
-  } catch (err) {
-    console.warn("⚠️ Offline natijalarni Firebase-ga yuborishda xato:", err);
+    await saveParticipants();
+
+    console.log(
+      "✅ Offline ma'lumotlar Firebase'ga yuborildi"
+    );
+
+  } catch (error) {
+
+    console.warn(
+      "⚠️ Offline sync xato:",
+      error
+    );
   }
 }
 
@@ -1245,33 +1476,46 @@ function showWinnerModal(sorted) {
    INIT
 ===================== */
 onAuthStateChanged(auth, async (user) => {
+
   if (!user) {
     window.location.href = "index.html";
     return;
   }
 
   currentUserUid = user.uid;
-  localStorage.setItem("uid", currentUserUid);
 
-  await loadParticipants(); // 🔥 SHU BO'LISHI SHART
+  localStorage.setItem(
+    "uid",
+    currentUserUid
+  );
 
-  // 🔹 Offline natijalarni Firebase-ga yuboramiz
+  // 1️⃣ Participants
+  await loadParticipants();
+
+  // 2️⃣ Offline sync
   await syncOfflineResultsToFirebase();
 
+  // 3️⃣ Topics
   await loadTopicsSafe();
+
   renderUserTopics();
+
   restoreLastTopic();
 
+  // 4️⃣ Game history
   await loadGameHistorySafe();
+
+  // 5️⃣ Settings
   initSettings();
+
+  // 6️⃣ Board
   renderBoard();
 
-  
-
+  // 7️⃣ Other topics
   await loadOtherTopics();
-  // 🔥 SHU YANGI QATORLARNI QO‘SH
-  await loadParticipants();   // <<< MUHIM
-  renderParticipants();       // <<< MUHIM
+
+  // Participantni ikkinchi marta yuklamaymiz
+  renderParticipants();
 });
 function PARTICIPANTS_KEY() {
   return "participants_" + (currentUserUid || "guest");
