@@ -1,1259 +1,1426 @@
+/* =========================================================
+   BEKS GAME — PROFESSIONAL GAME SHOW / GLASS UI
+   Version 2.0
+   ---------------------------------------------------------
+   CSS-only redesign.
+   Existing HTML + JS selectors are preserved.
+   Performance-first: animations use transform/opacity.
+========================================================= */
+
+/* =========================
+   01. DESIGN TOKENS
+========================= */
+:root {
+  --bg-1: #07111f;
+  --bg-2: #0c1d36;
+  --bg-3: #132d52;
+
+  --glass: rgba(255, 255, 255, 0.10);
+  --glass-strong: rgba(255, 255, 255, 0.16);
+  --glass-soft: rgba(255, 255, 255, 0.07);
+  --glass-border: rgba(255, 255, 255, 0.18);
+
+  --white: #f8fafc;
+  --muted: #a9b7c9;
+  --dark: #0f172a;
+
+  --cyan: #22d3ee;
+  --blue: #3b82f6;
+  --purple: #8b5cf6;
+  --green: #22c55e;
+  --yellow: #f59e0b;
+  --red: #ef4444;
+  --pink: #ec4899;
+
+  --shadow-sm: 0 6px 18px rgba(0, 0, 0, .16);
+  --shadow-md: 0 12px 32px rgba(0, 0, 0, .22);
+  --shadow-lg: 0 22px 55px rgba(0, 0, 0, .30);
+
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+
+  --ease: cubic-bezier(.2, .8, .2, 1);
+}
+
+/* =========================
+   02. RESET / BASE
+========================= */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  scroll-behavior: smooth;
+}
+
 body {
-    margin: 5px;
-    padding-bottom: 15px;
-    
-    color: rgb(10, 10, 10);
-    font-family: Arial, sans-serif;
-    text-align: center;
-    
-    min-height: 100vh;
-    background-image: url("background.avif"); /* rasm nomi */
-    background-size: cover;          /* ekranni to‘liq qoplaydi */
-    background-position: center;     /* markazda turadi */
-    background-repeat: no-repeat;
-    background-attachment: fixed;    /* scroll bo‘lsa ham qimirlamaydi */
-    font-family: Arial, sans-serif;
-}
-/* ----------------------
-   GLOBAL FORM ELEMENTS
------------------------- */
-
-
-/* ===== PARTICIPANTS GRID ===== */
-.participantsBox {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 12px;
-  padding: 5px;
-
-  max-height: 100px; /* 1 qator */
-  overflow: hidden;
-
-  transition: max-height .3s ease;
+  min-height: 100vh;
+  margin: 0;
+  padding: 12px 18px 40px;
+  color: var(--white);
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  text-align: center;
+  background:
+    radial-gradient(circle at 10% 10%, rgba(34, 211, 238, .14), transparent 28%),
+    radial-gradient(circle at 90% 15%, rgba(139, 92, 246, .16), transparent 30%),
+    linear-gradient(135deg, var(--bg-1), var(--bg-2) 55%, var(--bg-3));
+  overflow-x: hidden;
 }
 
-.participantsBox.expanded {
-  max-height: 5000px;
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background-image: url("background.avif");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: .18;
+  pointer-events: none;
 }
 
-/* ===== CARD ===== */
-.participant {
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    180deg,
+    rgba(4, 10, 20, .18),
+    rgba(4, 10, 20, .62)
+  );
+  pointer-events: none;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  border: 0;
+}
+
+/* =========================
+   03. BRAND / HEADER
+========================= */
+h1 {
+  margin: 8px 0 18px;
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  line-height: 1;
+}
+
+.brand-logo {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .35));
+}
+
+.brand-main {
+  color: var(--white);
+  font-size: clamp(30px, 4vw, 48px);
+  font-weight: 950;
+  letter-spacing: 1px;
+  text-shadow: 0 8px 24px rgba(0, 0, 0, .32);
+}
+
+.brand-sub {
+  display: inline-block;
+  margin-left: 4px;
+  color: #cbd5e1;
+  font-size: clamp(17px, 2vw, 25px);
+  font-weight: 700;
+  letter-spacing: .4px;
+}
+
+.brand-f {
+  color: #fb7185;
+  font-weight: 950;
+}
+
+/* =========================
+   04. GLOBAL BUTTON SYSTEM
+========================= */
+button,
+.bigBtn,
+.shBtn {
   position: relative;
-
-  display: flex;
-  flex-direction: column;   /* 🔥 MUHIM: vertical layout */
-  gap: 6px;
-
-  padding: 12px 12px 10px;
+  min-height: 42px;
+  padding: 10px 16px;
+  border: 1px solid rgba(255,255,255,.14);
   border-radius: 12px;
-
-  background: rgba(113,113,113,.74);
-  backdrop-filter: blur(10px);
-
-  color: #fff;
-
-  transition: .2s;
-}
-
-.participant:hover {
-  transform: translateY(-2px);
-  background: rgba(60,59,59,.73);
-}
-
-/* ===== TOP ROW (RANK + BUTTONS) ===== */
-.participantTop {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-/* ===== RANK ===== */
-.rank {
-  width: 34px;
-  height: 34px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  border-radius: 8px;
-
-  background: #ffd54f;
-  color: #222;
-
-  font-weight: 700;
-  font-size: 14px;
-}
-
-/* ===== ACTION BUTTONS ===== */
-.participantActions {
-  display: flex;
-  gap: 5px;
-}
-
-.participantActions button {
-  width: 24px;
-  height: 24px;
-
-  border: none;
-  border-radius: 50%;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
+  color: #f8fafc;
+  background: linear-gradient(
+    135deg,
+    rgba(255,255,255,.16),
+    rgba(255,255,255,.07)
+  );
+  box-shadow:
+    0 7px 18px rgba(0,0,0,.18),
+    inset 0 1px 0 rgba(255,255,255,.12);
   cursor: pointer;
-  font-size: 12px;
-
-  transition: .2s;
-}
-
-/* colors */
-.editParticipant {
-  background: #ffb300;
-  color: #000;
-}
-
-.mergeParticipant {
-  background: #2196f3;
-  color: #fff;
-}
-
-.deleteParticipant {
-  background: #ff3b30;
-  color: #fff;
-}
-
-/* hover */
-.participantActions button:hover {
-  transform: scale(1.15);
-}
-
-/* ===== INFO (NAME + STATS) ===== */
-.info {
-  display: flex;
-  flex-direction: column;
-}
-
-.name {
-  font-weight: 700;
-  font-size: 17px;
-
-  /* 🔥 ism tepada turadi */
-}
-
-.stats {
   font-size: 14px;
-  opacity: .85;
+  font-weight: 750;
+  letter-spacing: .1px;
+  transition:
+    transform .18s var(--ease),
+    background .18s ease,
+    box-shadow .18s ease,
+    border-color .18s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* Har bir control blok */
+button:hover,
+.bigBtn:hover,
+.shBtn:hover {
+  transform: translateY(-2px);
+  border-color: rgba(34,211,238,.40);
+  background: linear-gradient(
+    135deg,
+    rgba(34,211,238,.20),
+    rgba(139,92,246,.14)
+  );
+  box-shadow:
+    0 12px 26px rgba(0,0,0,.24),
+    0 0 20px rgba(34,211,238,.12);
+}
+
+button:active,
+.bigBtn:active,
+.shBtn:active {
+  transform: translateY(0) scale(.97);
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+/* Main action */
+.bigBtn {
+  min-height: 44px;
+  padding: 11px 18px;
+}
+
+/* Shuffle action */
+.shBtn {
+  background: linear-gradient(
+    135deg,
+    rgba(34,211,238,.18),
+    rgba(59,130,246,.14)
+  );
+}
+
+/* =========================
+   05. INPUTS / SELECTS
+========================= */
+input,
+select {
+  min-height: 42px;
+  padding: 9px 13px;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 12px;
+  color: #e5edf7;
+  background: rgba(7,17,31,.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    0 5px 16px rgba(0,0,0,.14);
+  transition:
+    border-color .18s ease,
+    box-shadow .18s ease,
+    background .18s ease;
+}
+
+input::placeholder {
+  color: #91a1b5;
+}
+
+input:focus,
+select:focus {
+  border-color: rgba(34,211,238,.65);
+  background: rgba(7,17,31,.72);
+  box-shadow:
+    0 0 0 3px rgba(34,211,238,.10),
+    0 8px 22px rgba(0,0,0,.18);
+}
+
+input[type="text"] {
+  width: 220px;
+  min-width: 180px;
+}
+
+input[type="number"] {
+  width: 92px;
+}
+
+input[type="file"] {
+  width: 230px;
+}
+
+select {
+  width: 200px;
+}
+
+label {
+  color: #dbe7f5;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* =========================
+   06. TOP CONTROL ROWS
+========================= */
 .topicControls,
 .shuffleControls,
 .timerControls {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px; /* elementlar orasida bo‘sh joy */
-  margin-bottom: 15px;
-}
-
-/* Inputlar */
-.timeredit{
-  display: inline-block;
-}
-input[type="number"]
- {
-   padding: 10px 14px;
-  font-size: 16px;
-  border-radius: 12px;
-  border: none;
-  outline: none;
-
-  
-
-  background: rgb(255, 255, 255);
-  backdrop-filter: blur(10px);
-
-  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
-}
-input[type="text"],
-input[type="file"] {
-   padding: 10px 16px;
-  font-size: 16px;
-  border-radius: 12px;
-  border: none;
-  outline: none;
-
-  min-width: 220px;
-
-  background: rgb(255, 255, 255);
-  backdrop-filter: blur(10px);
-
-  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
-}
-
-/* Max-width bilan cheklash */
-input[type="text"] {
-  width: 200px; /* topic nomi uchun o‘rtacha kenglik */
-}
-
-input[type="number"] {
-  width: 80px; /* sekund inputi keng emas */
-}
-
-input[type="file"] {
-  width: 180px; /* Excel fayl inputi */
-}
-
-input:focus {
-  outline: none;
-  border-color: #4f46e5;
-  box-shadow: 0 0 5px rgba(79, 70, 229, 0.5);
-}
-
-/* Tugmalar */
-button {
-  padding: 8px 14px;
-  border-radius: 6px;
-  border: none;
-  background-color: #4f46e5;
-  color: white;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-button:hover {
-  background-color: #3730a3;
-}
-
-button:active {
-  transform: scale(0.97);
-}
-
-/* Katta tugma */
-.bigBtn {
-  background-color: #ec4899;
-}
-
-.bigBtn:hover {
-  background-color: #be185d;
-}
-
-/* Label */
-label {
-  font-weight: 600;
-  font-size: 14px;
-}
-
-/* Responsive kichik ekranlar */
-@media (max-width: 600px) {
-  .topicControls,
-  .shuffleControls,
-  .timerControls {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  input,
-  button {
-    width: 100% !important;
-  }
-}
-
-
-
-h1 {
-  margin:5px;
-  text-align: center;
-}
-
-.brand-logo {
-    width:40px;   /* kattaroq logo */
-    height: auto;
-}
-
-/* Beks Game — asosiy nom */
-.brand-main {
-  font-size: 35px;
-  font-weight: 900;
-  letter-spacing: 1.5px;
-  color: #000000cd; /* toza qora-ko‘kimtir */
-
-  text-shadow:
-    0 4px 14px rgba(0,0,0,0.18);
-}
-
-/* Top Fast Education — brend tag */
-.brand-sub {
-  display: inline-block;
-  margin-left: 14px;
-  font-size: 25px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-
-  color: #090909dc; /* soft kulrang */
-}
-
-/* F — aksent */
-.brand-f {
-  color: #e53935;
-  font-weight: 900;
-}
-
-
-
-/* Logout buttonini yuqori o‘ng burchakka joylash */
-#logoutBtn {
-    position: fixed;
-    top: 16px;      /* yuqoridan masofa */
-    right: 16px;    /* o‘ngdan masofa */
-    z-index: 50;    /* boshqa elementlar ustida bo‘lishi uchun */
-    font-size: 18px;
-    padding: 10px 20px;
-    border-radius: 8px;
-    cursor: pointer;
-    background: rgba(255, 255, 255, 0.65); /* qizil rang, xohlovga qarab o‘zgartirish mumkin */
-    color: rgb(12, 12, 12);
-    border: none;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-
-    transition: 
-    transform 0.2s ease,
-    box-shadow 0.2s ease,
-}
-#logoutBtn:hover {
-  transform: translateY(-2px) scale(1.03);
-  box-shadow: 0 10px 25px rgba(0, 198, 255, 0.45);
-  background: rgba(255, 255, 255, 0.9);
-}
-
-#logoutBtn:active {
-  transform: scale(0.97);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-}
-
-
-
-
-h1 {
-    font-size: 48px;
-    margin: 16px 0;
-}
-
-.categories {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    background: #c5c5c5;
-    padding: 5px 0;
-    font-size: 25px;
-    font-weight: bold;
-}
-
-.board {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 5px;
-    margin-top: 10px;
-}
-
-
-.cell {
-  background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-
-  color: #222;
-  padding: 22px 0;
-  font-size: 28px;
-  font-weight: 600;
-  text-align: center;
-
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.4);
-
-  cursor: pointer;
-
-  box-shadow:
-    0 8px 20px rgba(0,0,0,0.12);
-
-  transition:
-    transform 0.25s ease,
-    box-shadow 0.25s ease,
-    background 0.3s ease;
-}
-
-/* ✨ hover – yengil va jonli */
-.cell:hover {
-  background: rgba(255, 255, 255, 0.9);
-  transform: translateY(-6px);
-  box-shadow: 0 10px 25px rgba(0, 198, 255, 0.45);
-}
-
-/* 👇 bosilganda */
-.cell:active {
-  transform: scale(0.97);
-  box-shadow: 0 6px 14px rgba(0,0,0,0.25);
-}
-
-/* ❌ ishlatilgan */
-.cell.used {
-  background: rgba(180, 180, 180, 0.35);
-  color: #777;
-  cursor: not-allowed;
-  box-shadow: inset 0 3px 8px rgba(0,0,0,0.25);
-}
-
-/* used hover bo‘lmasin */
-.cell.used:hover {
-  transform: none;
-  box-shadow: inset 0 3px 8px rgba(0,0,0,0.25);
-}
-
-
-.modal {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.85); /* shaffof qorong‘i fon */
-    backdrop-filter: blur(6px);       /* zamonaviy blur effekti */
-    z-index: 1000;
-    justify-content: center;
-    align-items: center;
-}
-
-/* Modal box */
-.modal-box {
-    background: #ffffff;
-    color: #111;
-    width: 90%;
-    max-width: 800px;
-    margin: 5% auto;
-    padding: 40px;
-    border-radius: 20px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.3); /* yumshoq shadow */
-    text-align: center;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    transition: transform 0.3s ease, opacity 0.3s ease;
-    max-height: 90vh;
-    
-}
-
-/* Savol */
-#qText {
-    font-size: 52px;
-    font-weight: 800;
-    margin-bottom: 20px;
-    color: #0d6efd; /* yorqin ko‘k */
-    text-shadow: 1px 1px 4px rgba(0,0,0,0.2);
-}
-
-/* Javob matni */
-#aText {
-    font-size: 48px;
-    margin-top: 20px;
-    color: #198754; /* yorqin yashil */
-    text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
-}
-
-#timer {
-    font-size: 64px;
-    font-weight: 800;
-    color: #dc3545;
-}
-
-/* har sekundda urish */
-.timer-animate {
-    animation: tick 0.35s ease;
-}
-
-/* oxirgi sekundlar kuchli */
-.timer-last {
-    color: #ff0000;
-    animation: danger 0.6s infinite;
-}
-
-@keyframes tick {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.25); }
-    100% { transform: scale(1); }
-}
-
-@keyframes danger {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.35); }
-    100% { transform: scale(1); }
-}
-
-
-/* Tugmalar uchun zamonaviy stil */
-.bigBtn {
-    padding: 10px 20px;
-    margin: 10px;
-    font-size: 15px;
-    font-weight: 600;
-    border: none;
-    border-radius: 12px;
-    cursor: pointer;
-    color: #070707;
-    background: linear-gradient(135deg, #ffffff, #e1e1e1); /* yorqin gradient */
-    transition: 0.3s ease;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-}
-
-.bigBtn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
-    background: linear-gradient(135deg, #fffefe, #e3e3e3);
-}
-
-
-
-.hidden {
-    display: none;
-}
-
-/* TEAM QO‘SHISH PANELI */
-.teamAdd {
-  display: flex;
   justify-content: center;
-  align-items: center;
-  gap: 12px;
-  margin: 30px auto 20px;
-  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
 }
-
-.settingsBox {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-#teamNameInput {
-  padding: 12px 16px;
-  font-size: 16px;
-  border-radius: 12px;
-  border: none;
-  outline: none;
-
-  min-width: 220px;
-
-  background: rgba(255,255,255,0.7);
-  backdrop-filter: blur(10px);
-
-  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
-}
-
-/* TEAM QO‘SHISH BUTTON */
 
 .teamAdd {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  position: relative;
   width: 100%;
-  margin: 20px 0;
+  min-height: 64px;
+  margin: 20px auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
 }
 
 .leftControls,
 .centerControls,
-.rightControls {
+.rightControls,
+.settingsBox {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
 }
 
 .centerControls {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
+  z-index: 2;
 }
 
 .settingsBox {
+  padding: 7px 9px;
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  background: var(--glass-soft);
+  box-shadow: var(--shadow-sm);
+}
+
+#teamNameInput {
+  width: 220px;
+  min-width: 180px;
+}
+
+#accountBtn,
+#logoutBtn {
+  position: fixed;
+  top: 14px;
+  z-index: 50;
+  min-height: 42px;
+  background: rgba(7,17,31,.66);
+  backdrop-filter: blur(10px);
+}
+
+#accountBtn {
+  right: 122px;
+}
+
+#logoutBtn {
+  right: 14px;
+}
+
+/* =========================
+   07. GAME BOARD
+========================= */
+.categories {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 7px;
+  margin: 8px auto 0;
+}
+
+.categories > div {
+  padding: 13px 8px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 12px;
+  color: #eaf7ff;
+  background: linear-gradient(
+    135deg,
+    rgba(34,211,238,.18),
+    rgba(139,92,246,.14)
+  );
+  box-shadow: var(--shadow-sm);
+  font-size: clamp(16px, 2vw, 24px);
+  font-weight: 900;
+  text-shadow: 0 2px 8px rgba(0,0,0,.25);
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.cell {
+  min-height: 88px;
   display: flex;
   align-items: center;
-  gap: 8px;
-}
-
-.teamAdd .bigBtn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 30px rgba(59,130,246,0.5);
-}
-
-/* TEAMS CONTAINER */
-.teams {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 260px));
-  gap: 18px;
-
-  margin: 20px auto;
   justify-content: center;
+  padding: 16px 8px;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 17px;
+  color: #f8fbff;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255,255,255,.15),
+      rgba(255,255,255,.055)
+    );
+  box-shadow:
+    0 10px 24px rgba(0,0,0,.18),
+    inset 0 1px 0 rgba(255,255,255,.10);
+  cursor: pointer;
+  font-size: clamp(22px, 3vw, 34px);
+  font-weight: 950;
+  text-shadow: 0 3px 12px rgba(0,0,0,.32);
+  transition:
+    transform .18s var(--ease),
+    box-shadow .18s ease,
+    border-color .18s ease,
+    background .18s ease;
 }
 
+.cell:hover {
+  transform: translateY(-4px);
+  border-color: rgba(34,211,238,.55);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(34,211,238,.23),
+      rgba(139,92,246,.17)
+    );
+  box-shadow:
+    0 16px 34px rgba(0,0,0,.25),
+    0 0 24px rgba(34,211,238,.13);
+}
 
-/* HAR BIR TEAM CARD */
+.cell:active {
+  transform: scale(.97);
+}
+
+.cell.used,
+.cell.used:hover {
+  color: rgba(203,213,225,.28);
+  background: rgba(255,255,255,.035);
+  border-color: rgba(255,255,255,.06);
+  cursor: not-allowed;
+  box-shadow: inset 0 3px 10px rgba(0,0,0,.22);
+  transform: none;
+}
+
+/* =========================
+   08. TEAM CARDS
+========================= */
+.teams {
+  width: 100%;
+  margin: 22px auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 270px));
+  justify-content: center;
+  gap: 16px;
+}
+
 .team {
   position: relative;
-  padding: 16px;
-  border-radius: 18px;
-
-  background: linear-gradient(
-    145deg,
-    rgba(255,255,255,0.9),
-    rgba(245,245,245,0.9)
-  );
-
-  box-shadow: 0 10px 26px rgba(0,0,0,0.14);
+  min-height: 170px;
+  padding: 19px 16px 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 20px;
+  color: #f8fafc;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255,255,255,.14),
+      rgba(255,255,255,.055)
+    );
+  box-shadow:
+    0 15px 35px rgba(0,0,0,.23),
+    inset 0 1px 0 rgba(255,255,255,.10);
   text-align: center;
+  transition:
+    transform .2s var(--ease),
+    box-shadow .2s ease,
+    border-color .2s ease;
+}
 
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+.team::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 0;
+  height: 3px;
+  border-radius: 0 0 8px 8px;
+  background: linear-gradient(90deg, var(--cyan), var(--purple));
+  opacity: .9;
 }
 
 .team:hover {
   transform: translateY(-4px);
-  box-shadow: 0 18px 38px rgba(0,0,0,0.2);
+  border-color: rgba(34,211,238,.30);
+  box-shadow:
+    0 22px 44px rgba(0,0,0,.28),
+    0 0 25px rgba(34,211,238,.08);
 }
 
-/* TEAM NOMI */
-.participant strong {
-  font-size: 16px;
-  color: #fff;
+.team strong {
+  display: block;
+  margin-bottom: 5px;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 900;
 }
 
-.participant small {
-  color: #aaa;
-  font-size: 13px;
-}
-
-/* SCORE */
 .team span {
   display: block;
-  font-size: 30px;
-  font-weight: 900;
-  margin: 10px 0;
-  color: #2563eb;
+  margin: 10px 0 14px;
+  color: #67e8f9;
+  font-size: 36px;
+  font-weight: 950;
+  line-height: 1;
+  text-shadow: 0 0 18px rgba(34,211,238,.22);
 }
 
-/* parent div markazlash uchun */
 .scoreBtns {
-  display: flex;
-  justify-content: center; /* gorizontal markaz */
-  align-items: center;     /* vertikal markaz */
-  gap: 8px;                /* tugmalar orasidagi bo‘sh joy */
-  margin-top: 8px;
-}
-/* + va - tugmalar */
-.plusBtn, .minusBtn {
-  width: 100px;
-  height: 60px;
-  border-radius: 8px;    
-  font-size: 50px;       
-  font-weight: bold;
-
   display: flex;
   align-items: center;
   justify-content: center;
-  line-height: 1;
-  padding: 0;
+  gap: 9px;
+  margin-top: 8px;
+}
 
-  background: #f3f4f6;   
-  color: #1f2937;         
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-  transition: all 0.2s ease;
+.plusBtn,
+.minusBtn {
+  width: 104px;
+  height: 54px;
+  min-height: 54px;
+  padding: 0;
+  border-radius: 13px;
+  font-size: 34px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.plusBtn {
+  color: #dcfce7;
+  background: linear-gradient(135deg, rgba(34,197,94,.28), rgba(16,185,129,.12));
 }
 
 .plusBtn:hover {
-  background: #22c55e;  
-  color: white;
+  border-color: rgba(34,197,94,.65);
+  background: linear-gradient(135deg, rgba(34,197,94,.48), rgba(16,185,129,.20));
+}
+
+.minusBtn {
+  color: #fee2e2;
+  background: linear-gradient(135deg, rgba(239,68,68,.25), rgba(190,24,93,.12));
 }
 
 .minusBtn:hover {
-  background: #ef4444;  
-  color: white;
+  border-color: rgba(239,68,68,.65);
+  background: linear-gradient(135deg, rgba(239,68,68,.45), rgba(190,24,93,.18));
 }
 
-
-
-.team .bigBtn {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  font-size: 18px;
-  margin: 4px;
-
-  background: rgba(255,255,255,0.8);
-  color: #1f2937;
-
-  box-shadow: 0 6px 16px rgba(0,0,0,0.15);
-  transition: all 0.2s ease;
-}
-
-.team .bigBtn:hover {
-  background: #2563eb;
-  color: #fff;
-  transform: scale(1.1);
-}
-
-
-/* DELETE ❌ (hoverda chiqadi) */
-.team::after {
-  content: "✕";
+.team .closeBtn {
   position: absolute;
-  top: 10px;
-  right: 12px;
+  top: 9px;
+  right: 9px;
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  color: #fecaca;
+  background: rgba(239,68,68,.12);
+  font-size: 19px;
+  line-height: 1;
+  opacity: .72;
+}
 
-  font-size: 18px;
-  font-weight: 900;
-  color: #ef4444;
+.team .closeBtn:hover {
+  color: #fff;
+  background: rgba(239,68,68,.78);
+}
 
-  opacity: 0;
+/* =========================
+   09. PARTICIPANTS
+========================= */
+.participantsHeader {
+  display: flex;
+  justify-content: center;
+  margin: 14px auto;
+}
+
+.participantsBox {
+  width: min(1200px, 100%);
+  max-height: 118px;
+  margin: 0 auto;
+  padding: 6px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px;
+  overflow: hidden;
+  transition: max-height .25s ease;
+}
+
+.participantsBox.expanded {
+  max-height: 5000px;
+  overflow-y: auto;
+}
+
+.participant {
+  position: relative;
+  min-height: 92px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 15px;
+  color: #f8fafc;
+  background: rgba(255,255,255,.075);
+  box-shadow: var(--shadow-sm);
+  text-align: left;
   cursor: pointer;
-  transition: opacity 0.2s ease;
+  transition:
+    transform .18s var(--ease),
+    border-color .18s ease,
+    background .18s ease;
 }
 
-.team:hover::after {
-  opacity: 1;
+.participant:hover {
+  transform: translateY(-3px);
+  border-color: rgba(34,211,238,.42);
+  background: rgba(255,255,255,.12);
 }
 
-
-input{
-    font-size: 18px;
-    padding: 10px;
-    margin: 8px;
-    border-radius: 10px;
-    width: 20%;
-}
-select {
-    font-size: 18px;
-    padding: 10px;
-    margin: 8px;
-    border-radius: 10px;
-    width: 200px;
+.participantTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-
-
-#winnerModal {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.9);
-    z-index: 20;
-    text-align: center;
-    color: white;
+.rank {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--yellow), #ea580c);
+  box-shadow: 0 5px 12px rgba(245,158,11,.22);
+  font-size: 13px;
+  font-weight: 950;
 }
 
-#winnerText {
-    font-size: 60px;
-    margin-top: 50px;
+.participantActions {
+  display: flex;
+  gap: 5px;
 }
 
-#restWinners {
-    font-size: 44px;
-    margin-top: 20px;
+.participantActions button {
+  width: 27px;
+  height: 27px;
+  min-height: 27px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 12px;
 }
 
-#confetti {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
+.editParticipant {
+  background: rgba(245,158,11,.28);
 }
 
-#history {
-    position: fixed;
-    bottom: 10px;
-    right: 10px;
-    background: rgba(0, 0, 0, 0.6);
-    padding: 10px;
-    border-radius: 12px;
-    text-align: right;
-    font-size: 14px;
-    color: white;
-    max-width: 200px;
-    max-height: 300px;
-    overflow-y: auto;
+.mergeParticipant {
+  background: rgba(59,130,246,.28);
 }
 
-/* BUTUN HISTORY BLOK */
-.historyBox {
-  margin: 40px auto;
-  padding: 20px 24px;
-
-  max-width: 100%;
-  box-sizing: border-box;
-
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(12px);
-
-  border-radius: 20px;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+.deleteParticipant {
+  background: rgba(239,68,68,.28);
 }
 
-/* Sarlavha */
-.historyBox h2 {
-  margin-bottom: 18px;
-  font-size: 26px;
-  font-weight: 800;
-  color: #1f2937;
+.participantActions button:hover {
+  transform: scale(1.10);
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.name {
+  color: #ffffff;
+  font-size: 17px;
+  font-weight: 850;
+}
+
+.stats {
+  color: #aebed1;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+/* =========================
+   10. TOPIC PANELS
+========================= */
+#userTopicPanel,
+#otherTopicPanel {
+  width: 100%;
+  margin-top: 14px;
+  padding: 5px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 12px;
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+#userTopicPanel .topicCard,
+#otherTopicPanel .topicCard {
+  position: relative;
+  min-height: 90px;
+  padding: 15px 14px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.13);
+  border-left: 4px solid var(--cyan);
+  border-radius: 15px;
+  color: #f8fafc;
+  background: rgba(255,255,255,.075);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    transform .18s var(--ease),
+    box-shadow .18s ease,
+    border-color .18s ease;
+}
+
+#userTopicPanel .topicCard {
+  border-left-color: var(--purple);
+}
+
+#userTopicPanel .topicCard:hover,
+#otherTopicPanel .topicCard:hover {
+  transform: translateY(-3px);
+  border-color: rgba(34,211,238,.35);
+  box-shadow: var(--shadow-md);
+}
+
+#userTopicPanel .topicCard strong,
+#otherTopicPanel .topicCard strong {
+  display: block;
+  padding-right: 54px;
+  margin-bottom: 6px;
+  color: #ffffff;
+  font-size: 19px;
+  font-weight: 900;
+}
+
+#userTopicPanel .topicCard span,
+#otherTopicPanel .topicCard span {
+  display: block;
+  color: #aebed1;
+  font-size: 14px;
+}
+
+#otherTopicPanel .topicCard small {
+  display: block;
+  margin-top: 6px;
+  color: #91a4ba;
+}
+
+#userTopicPanel .topicCard .editBtn,
+#userTopicPanel .topicCard .deleteBtn {
+  position: absolute;
+  top: 9px;
+  width: 27px;
+  height: 27px;
+  min-height: 27px;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(255,255,255,.07);
+  font-size: 15px;
+}
+
+#userTopicPanel .topicCard .editBtn {
+  right: 42px;
+  color: #fde68a;
+}
+
+#userTopicPanel .topicCard .deleteBtn {
+  right: 9px;
+  color: #fda4af;
+}
+
+#userTopicPanel .topicCard .editBtn:hover {
+  background: rgba(245,158,11,.25);
+}
+
+#userTopicPanel .topicCard .deleteBtn:hover {
+  background: rgba(239,68,68,.25);
+}
+
+.otherTopicSearch {
+  margin: 20px auto 8px;
+}
+
+#otherTopicSearchInput {
+  width: min(360px, 90%);
+}
+
+/* =========================
+   11. QUESTION MODAL
+========================= */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(1, 7, 18, .78);
+  backdrop-filter: blur(8px);
+}
+
+.modal-box {
+  width: min(900px, 94vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: clamp(24px, 5vw, 46px);
+  border: 1px solid rgba(255,255,255,.20);
+  border-radius: 25px;
+  color: #f8fafc;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(19,45,82,.93),
+      rgba(7,17,31,.95)
+    );
+  box-shadow:
+    0 30px 80px rgba(0,0,0,.48),
+    inset 0 1px 0 rgba(255,255,255,.10);
   text-align: center;
 }
 
-/* HISTORY LIST — chapdan o‘ngga */
-#historyList {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px;
-
-  width: 100%;
-  box-sizing: border-box;
+.modal-box h2 {
+  margin-bottom: 20px;
 }
 
-/* HAR BIR O‘YIN KARTASI */
+#qText {
+  margin-bottom: 24px;
+  color: #e0f2fe;
+  font-size: clamp(30px, 5vw, 56px);
+  font-weight: 950;
+  line-height: 1.12;
+  text-shadow: 0 0 24px rgba(34,211,238,.16);
+}
+
+#aText {
+  margin: 22px 0;
+  color: #bbf7d0;
+  font-size: clamp(25px, 4vw, 48px);
+  font-weight: 850;
+  line-height: 1.18;
+  text-shadow: 0 0 20px rgba(34,197,94,.14);
+}
+
+#timer {
+  margin: 16px 0 20px;
+  color: #fda4af;
+  font-size: clamp(48px, 7vw, 72px);
+  font-weight: 950;
+  line-height: 1;
+  text-shadow: 0 0 25px rgba(239,68,68,.22);
+}
+
+.timer {
+  color: #fda4af;
+  font-size: 32px;
+  font-weight: 900;
+}
+
+.timer-animate {
+  animation: tick .28s ease;
+}
+
+.timer-last {
+  color: #ff5252 !important;
+  animation: danger .55s infinite;
+}
+
+@keyframes tick {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+@keyframes danger {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
+
+/* =========================
+   12. BONUS EFFECT
+========================= */
+.bonusEffect {
+  position: fixed;
+  top: 42%;
+  left: 50%;
+  z-index: 9999;
+  transform: translate(-50%, -50%) scale(.6);
+  color: #fde047;
+  font-size: clamp(34px, 6vw, 70px);
+  font-weight: 950;
+  line-height: 1;
+  white-space: nowrap;
+  text-shadow:
+    0 0 12px rgba(245,158,11,.65),
+    0 0 34px rgba(239,68,68,.45);
+  pointer-events: none;
+  animation: bonusPop 1.8s ease-out forwards;
+}
+
+@keyframes bonusPop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(.45);
+  }
+  25% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.04);
+  }
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* =========================
+   13. WINNER SCREEN
+========================= */
+#winnerModal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  overflow: hidden;
+  color: #fff;
+  background:
+    radial-gradient(circle at center, rgba(59,130,246,.18), transparent 38%),
+    rgba(1,5,15,.92);
+  text-align: center;
+}
+
+#winnerText {
+  position: relative;
+  z-index: 2;
+  margin: 18vh 20px 0;
+  color: #fef3c7;
+  font-size: clamp(38px, 7vw, 76px);
+  font-weight: 950;
+  line-height: 1.05;
+  text-shadow:
+    0 0 20px rgba(245,158,11,.35),
+    0 10px 30px rgba(0,0,0,.35);
+  animation: winnerIn .65s var(--ease);
+}
+
+#restWinners {
+  position: relative;
+  z-index: 2;
+  margin-top: 26px;
+  color: #cbd5e1;
+  font-size: clamp(22px, 4vw, 42px);
+  font-weight: 750;
+  line-height: 1.5;
+}
+
+@keyframes winnerIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+#confetti {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* =========================
+   14. GAME HISTORY
+========================= */
+.historyBox {
+  width: 100%;
+  margin: 34px auto;
+  padding: 20px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 22px;
+  background: rgba(255,255,255,.065);
+  box-shadow: var(--shadow-md);
+}
+
+.historyBox h2 {
+  margin-bottom: 18px;
+  color: #e8f5ff;
+  font-size: 25px;
+  font-weight: 900;
+}
+
+#historyList {
+  width: 100%;
+  max-height: 360px;
+  padding: 4px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 12px;
+  overflow-y: auto;
+}
+
 #historyList .historyItem {
   position: relative;
-
-  padding: 14px 16px;
-  border-radius: 16px;
-
-  background: linear-gradient(
-    145deg,
-    rgba(255,255,255,0.85),
-    rgba(240,240,240,0.85)
-  );
-
-  box-shadow:
-    0 8px 20px rgba(0,0,0,0.1);
-
-  font-size: 15px;
-  color: #374151;
-  line-height: 1.5;
-
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  min-height: 110px;
+  padding: 15px 42px 14px 15px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-left: 4px solid var(--cyan);
+  border-radius: 15px;
+  color: #dce8f5;
+  background: rgba(255,255,255,.075);
+  box-shadow: var(--shadow-sm);
+  text-align: left;
+  word-break: break-word;
+  line-height: 1.45;
+  transition: transform .18s var(--ease), box-shadow .18s ease;
 }
 
-/* hover */
 #historyList .historyItem:hover {
-  transform: translateY(-4px);
-  box-shadow:
-    0 16px 32px rgba(0,0,0,0.18);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
 }
 
-/* O‘YIN RAQAMI */
 #historyList .historyItem strong {
   display: block;
-  margin-bottom: 6px;
-
+  margin-bottom: 5px;
+  color: #67e8f9;
   font-size: 15px;
-  font-weight: 800;
-  color: #2563eb;
+  font-weight: 900;
 }
 
-/* Jamoalar */
 #historyList .historyItem span,
 #historyList .historyItem div {
   display: block;
 }
 
-/* matn chiqib ketmasin */
-#historyList .historyItem {
-  word-break: break-word;
+#historyList .historyItem .date,
+#historyList .historyItem .time {
+  color: #8193a9;
+  font-size: 12px;
 }
 
-
-/* ======================
-   USER TOPIC STYLING
-====================== */
-
-/* container */
-#userTopicPanel {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
-  margin-top: 10px;
-  max-height: 350px;
-  overflow-y: auto;
-  padding-right: 6px;
+#historyList .historyItem .teamScore {
+  margin-top: 5px;
+  color: #e2e8f0;
+  font-size: 14px;
+  font-weight: 650;
 }
 
-/* har bir topic kartasi */
-#userTopicPanel .topicCard {
-  position: relative;
-  background: #fafafad6;
-  border-radius: 14px;
-  padding: 12px;
-  font-size: 18px;
-  border-left: 4px solid #434343;
-  cursor: pointer;
-  box-sizing: border-box;
-  overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-#userTopicPanel .topicCard:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-}
-
-/* topic nomi va savol soni */
-#userTopicPanel .topicCard strong {
-  display: block;
-  color: #000000;
-  font-size: 23px;
-  margin-bottom: 6px;
-}
-
-#userTopicPanel .topicCard span {
-  display: block;
-  font-size: 18px;
-  color: #0f0f0fc0;
-}
-
-/* edit va delete tugmalari topic ustida */
-#userTopicPanel .topicCard .editBtn,
-#userTopicPanel .topicCard .deleteBtn {
-  position: absolute;
-  top: 6px;
-  width: 24px;
-  height: 24px;
-  border: none;
-  background: transparent;
-  font-size: 25px;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-#userTopicPanel .topicCard .editBtn {
-  right: 36px;
-  color: #ffd966;
-}
-
-#userTopicPanel .topicCard .editBtn:hover {
-  color: #fff200;
-}
-
-#userTopicPanel .topicCard .deleteBtn {
-  right: 6px;
-  color: #ff4d4f;
-}
-
-#userTopicPanel .topicCard .deleteBtn:hover {
-  color: #ff7875;
-}
-
-
-/* =========================
-   GAME HISTORY – GRID STYLE
-   HTML va JS GA TEGILMADI
-========================= */
-
-#gameHistory {
-  margin-top: 10px;
-}
-
-/* chapdan o‘ngga ustunlar */
-#historyList {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 14px;
-
-  max-height: 340px;
-  overflow-y: auto;
-  padding-right: 6px;
-}
-
-/* har bir o‘yin kartasi */
-#historyList .historyItem {
-  background: #6c6c6c6d;
-  border-radius: 14px;
-  padding: 12px;
-  font-size: 18px;
-  border-left: 4px solid #00e0ff;
-
-  box-sizing: border-box;
-  overflow: hidden;
-}
-
-/* ichki matn chiqib ketmasin */
-#historyList .historyItem {
-  word-break: break-word;
-  line-height: 1.4;
-}
-
-/* strong (3-o‘yin) chiroyliroq */
-#historyList .historyItem strong {
-  display: block;
-  color: #00e0ff;
-  font-size: 15px;
-  margin-bottom: 6px;
-}
-
-/* | belgilarini pastga tushirgandek ko‘rsatish */
-#historyList .historyItem br {
-  line-height: 1.6;
-}
-
-
-/* O‘yin tarixidagi o‘chirish X belgi */
 #historyList .historyItem .closeBtn {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  font-weight: bold;
-  color: #ff4d4f;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: 30px;
-  line-height: 1;
+  top: 8px;
+  right: 8px;
+  width: 29px;
+  height: 29px;
+  min-height: 29px;
   padding: 0;
-  transition: 0.2s;
+  border-radius: 50%;
+  color: #fecaca;
+  background: rgba(239,68,68,.10);
+  font-size: 19px;
 }
 
 #historyList .historyItem .closeBtn:hover {
-  color: #ff7875;
-}
-
-/* Team container */
-#teams .team {
-  position: relative;
-  background: #1b1b1b5d;
   color: #fff;
-  padding: 12px 16px;
-  margin-bottom: 12px;
-  border-radius: 14px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-  font-size: 20px;
-  transition: transform 0.2s, box-shadow 0.2s;
+  background: rgba(239,68,68,.75);
 }
 
-/* Hover effekt */
-#teams .team:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0,0,0,0.5);
-}
-
-/* Close button */
-#teams .team .closeBtn {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  font-weight: bold;
-  color: #ff4d4f;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: 30px;
-  line-height: 1;
-  padding: 0;
-  transition: 0.2s;
-}
-
-
-/* + - button container */
-#teams .team .scoreBtns {
-  display: flex;
-  gap: 10px;        /* Buttonlar orasidagi bo‘sh joy */
-  margin-top: 4px;
-}
-
-/* + - buttonlar */
-#teams .team .scoreBtns .bigBtn {
-  flex: 1;
-  padding: 4px 6px;
-  font-size: 20px;
-  border-radius: 8px;
-}
-
-.bonusEffect {
+/* Legacy floating history element */
+#history {
   position: fixed;
-  top: 40%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0);
-  font-size: 64px;
-  font-weight: bold;
-  color: gold;
-  text-shadow: 0 0 20px red, 0 0 40px orange;
-  z-index: 9999;
-  animation: bonusPop 4.2s ease-out forwards;
-}
-
-@keyframes bonusPop {
-  0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
-  50% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
-  100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
-}
-
-.hidden {
-  display: none;
-}
-
-.timer {
-  font-size: 32px;
-  font-weight: bold;
-  color: red;
-}
-
-/* ====== BOSHQA FOYDALANUVCHI TOPIKLARI ====== */
-
-.otherTopicSearch {
-  margin-top: 20px;
-  text-align: center;
-}
-
-#otherTopicSearchInput {
-  width: 300px;
+  right: 10px;
+  bottom: 10px;
+  z-index: 40;
+  max-width: 220px;
+  max-height: 300px;
   padding: 10px;
-  border-radius: 10px;
-  border: none;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-}
-
-/* container — xuddi userTopicPanel kabi */
-#otherTopicPanel {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
-  margin-top: 10px;
-  max-height: 350px;
   overflow-y: auto;
-  padding-right: 6px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 13px;
+  color: #fff;
+  background: rgba(7,17,31,.72);
+  box-shadow: var(--shadow-md);
 }
 
-/* card — xuddi siznikidek */
-#otherTopicPanel .topicCard {
-  position: relative;
-  background: #fafafad6;
-  border-radius: 14px;
-  padding: 12px;
-  font-size: 18px;
-  border-left: 4px solid #2563eb; /* boshqalarnikini farqlash uchun ko‘k */
-  cursor: pointer;
-  box-sizing: border-box;
-  overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-#otherTopicPanel .topicCard:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-}
-
-#otherTopicPanel .topicCard strong {
-  display: block;
-  color: #000000;
-  font-size: 23px;
-  margin-bottom: 6px;
-}
-
-#otherTopicPanel .topicCard span {
-  display: block;
-  font-size: 18px;
-  color: #0f0f0fc0;
-}
-.otherTopic {
-  cursor: pointer;
-  transition: transform .1s, box-shadow .1s;
-}
-
-.otherTopic:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0,0,0,.15);
-}
-
-/* Account Settings modal */
-#accountBtn {
-    position: fixed;
-    top: 16px;
-    right: 150px; /* Logout dan chapga joylashtiramiz */
-    z-index: 50;
-    font-size: 18px;
-    padding: 10px 20px;
-    border-radius: 8px;
-    cursor: pointer;
-    background: rgba(255, 255, 255, 0.65);
-    color: #0c0c0c;
-    border: none;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-#accountBtn:hover {
-  transform: translateY(-2px) scale(1.03);
-  box-shadow: 0 10px 25px rgba(0,198,255,0.45);
-  background: rgba(255, 255, 255, 0.9);
-}
-#accountBtn:active { transform: scale(0.97); }
-
+/* =========================
+   15. ACCOUNT MODAL
+========================= */
 #accountModal .modal-box input {
-    padding: 12px 16px;
-    width: 20%;
-    font-size: 18px;
-    border-radius: 10px;
-    border: 1px solid #ccc;
-    margin-top: 8px;
+  width: min(320px, 90%);
+  margin: 8px auto 16px;
 }
 
+/* =========================
+   16. DOWNLOAD / TOPIC TOOLS
+========================= */
+#downloadTemplateBtn {
+  margin-top: 8px;
+}
 
-@media(max-width:768px) {
-    h1 {
-        font-size: 36px;
-    }
+.timeredit {
+  width: fit-content;
+  max-width: 100%;
+  margin: 18px auto;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 15px;
+  background: rgba(255,255,255,.055);
+}
 
-    .categories {
-        grid-template-columns: repeat(2, 1fr);
-        font-size: 18px;
-    }
+.secund {
+  color: #cbd5e1;
+}
 
-    .board {
-        grid-template-columns: repeat(2, 1fr);
-    }
+/* =========================
+   17. SCROLLBARS
+========================= */
+#userTopicPanel::-webkit-scrollbar,
+#otherTopicPanel::-webkit-scrollbar,
+#historyList::-webkit-scrollbar,
+#history::-webkit-scrollbar,
+.participantsBox.expanded::-webkit-scrollbar {
+  width: 7px;
+}
 
-    .cell {
-        padding: 30px 0;
-        font-size: 24px;
-    }
+#userTopicPanel::-webkit-scrollbar-thumb,
+#otherTopicPanel::-webkit-scrollbar-thumb,
+#historyList::-webkit-scrollbar-thumb,
+#history::-webkit-scrollbar-thumb,
+.participantsBox.expanded::-webkit-scrollbar-thumb {
+  border-radius: 20px;
+  background: rgba(148,163,184,.35);
+}
 
-    #qText,
-    #aText {
-        font-size: 24px;
-    }
+#userTopicPanel::-webkit-scrollbar-track,
+#otherTopicPanel::-webkit-scrollbar-track,
+#historyList::-webkit-scrollbar-track,
+#history::-webkit-scrollbar-track,
+.participantsBox.expanded::-webkit-scrollbar-track {
+  background: transparent;
+}
 
-    .bigBtn {
-        font-size: 18px;
-        padding: 10px 24px;
-    }
+/* =========================
+   18. PERFORMANCE
+========================= */
+.cell,
+.team,
+.participant,
+.topicCard,
+.historyItem,
+button {
+  will-change: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* =========================
+   19. TABLET
+========================= */
+@media (max-width: 900px) {
+  body {
+    padding: 10px 12px 30px;
   }
 
-@media(max-width:600px){
-    /* modal va savol fonti */
-    .modal-box {
-        max-width: 95%;
-        padding: 20px;
-        max-height: 90vh;
-        overflow-y: auto;
-    }
-    #qText, #aText {
-        font-size: 5vw; /* ekran kengligiga mos */
-    }
+  .teamAdd {
+    min-height: auto;
+    flex-wrap: wrap;
+  }
 
-    /* board kataklari 2 ta qatorda */
-    .board {
+  .centerControls {
+    position: static;
+    transform: none;
+    order: 2;
+  }
+
+  .leftControls {
+    order: 1;
+  }
+
+  .rightControls {
+    order: 3;
+  }
+
+  .teamAdd {
+    justify-content: center;
+  }
+
+  .leftControls,
+  .centerControls,
+  .rightControls {
+    justify-content: center;
+  }
+
+  #accountBtn {
+    right: 108px;
+  }
+}
+
+/* =========================
+   20. MOBILE
+========================= */
+@media (max-width: 650px) {
+  body {
+    padding: 8px 8px 25px;
+  }
+
+  h1 {
+    margin-top: 52px;
+    gap: 6px;
+  }
+
+  .brand-logo {
+    width: 38px;
+    height: 38px;
+  }
+
+  .brand-sub {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  #accountBtn,
+  #logoutBtn {
+    top: 8px;
+    min-height: 36px;
+    padding: 7px 11px;
+    font-size: 12px;
+  }
+
+  #accountBtn {
+    right: 98px;
+  }
+
+  #logoutBtn {
+    right: 8px;
+  }
+
+  .categories,
+  .board {
     min-width: 600px;
+  }
+
+  .cell {
+    min-height: 72px;
+    padding: 12px 4px;
+    font-size: 22px;
+    border-radius: 12px;
+  }
+
+  .teamAdd {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .leftControls,
+  .centerControls,
+  .rightControls {
+    position: static;
+    width: 100%;
+    justify-content: center;
+    transform: none;
+  }
+
+  .settingsBox {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .settingsBox input {
+    width: 76px;
+  }
+
+  .settingsBox select {
+    width: 150px;
+  }
+
+  .teams {
+    grid-template-columns: repeat(2, minmax(145px, 1fr));
+    gap: 10px;
+  }
+
+  .team {
+    min-height: 150px;
+    padding: 16px 8px 12px;
+  }
+
+  .team span {
+    font-size: 29px;
+  }
+
+  .plusBtn,
+  .minusBtn {
+    width: 70px;
+    height: 48px;
+    min-height: 48px;
+    font-size: 29px;
+  }
+
+  .participantsBox {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #userTopicPanel,
+  #otherTopicPanel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #historyList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .modal {
+    padding: 10px;
+  }
+
+  .modal-box {
+    width: 96vw;
+    padding: 22px 14px;
+    border-radius: 20px;
+  }
+
+  .timeredit {
+    width: 100%;
+  }
+
+  .timeredit input,
+  .timeredit button {
+    width: auto;
+  }
 }
 
-body {
-    overflow-x: auto;
-}
-    .cell {
-        font-size: 22px;
-        padding: 16px 0;
-    }
+/* =========================
+   21. SMALL PHONE
+========================= */
+@media (max-width: 430px) {
+  .teams {
+    grid-template-columns: 1fr 1fr;
+  }
 
-    /* logout button kichik ekran uchun */
-    #logoutBtn {
-        font-size: 14px;
-        padding: 6px 12px;
-    }
+  .participantsBox,
+  #userTopicPanel,
+  #otherTopicPanel,
+  #historyList {
+    grid-template-columns: 1fr;
+  }
+
+  .participant {
+    min-height: 86px;
+  }
+
+  .settingsBox {
+    width: 100%;
+  }
+
+  .settingsBox label {
+    font-size: 12px;
+  }
+
+  .settingsBox button {
+    width: 100%;
+  }
+
+  .plusBtn,
+  .minusBtn {
+    width: 62px;
+  }
+
+  .bonusEffect {
+    white-space: normal;
+    width: 95%;
+  }
 }
 
+/* =========================================================
+   END — BEKS GAME PROFESSIONAL GLASS UI
+========================================================= */
