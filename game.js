@@ -617,12 +617,54 @@ const sorted = [...participants].sort((a, b) => {
     /*
       PARTICIPANTNI TANLASH
     */
-    div.addEventListener(
-      "click",
-      () =>
-        addTeamWithParticipant(p)
-    );
+    /* =========================================================
+   PARTICIPANT CLICK
+   1-bosish  = O'YINGA QO'SHISH
+   2-bosish  = O'YINDAN CHIQARISH
+========================================================= */
 
+div.addEventListener("click", (e) => {
+
+  /* Tahrirlash / birlashtirish / o'chirish
+     tugmalari bosilganda participant tanlanmasin */
+  if (
+    e.target.closest(".editParticipant") ||
+    e.target.closest(".mergeParticipant") ||
+    e.target.closest(".deleteParticipant")
+  ) {
+    return;
+  }
+
+
+  /* HOZIRGI HOLATNI TO'G'RIDAN-TO'G'RI TEKSHIRAMIZ */
+  const currentTeam = teamsData.find(
+    team =>
+      String(team.participantId) ===
+      String(p.id)
+  );
+
+
+  /* =======================================================
+     AGAR O'YINDA BO'LSA
+     YANA BOSILDI → TANLOV BEKOR
+  ======================================================= */
+
+  if (currentTeam) {
+
+    removeTeam(currentTeam.id);
+
+    return;
+  }
+
+
+  /* =======================================================
+     AGAR O'YINDA BO'LMASA
+     BOSILDI → TANLASH
+  ======================================================= */
+
+  addTeamWithParticipant(p);
+
+});
 
     /*
       RASM TANLASH
