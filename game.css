@@ -592,7 +592,7 @@ label {
 }
 
 .participantsBox {
-  width: min(1200px, 100%);
+  width: min(100%, 100%);
   max-height: 118px;
   margin: 0 auto;
   padding: 6px;
@@ -713,7 +713,7 @@ label {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
   gap: 12px;
-  max-height: 350px;
+  max-height: 200px;
   overflow-y: auto;
 }
 
@@ -813,68 +813,117 @@ label {
 /* =========================
    11. QUESTION MODAL
 ========================= */
+
 .modal {
   display: none;
   position: fixed;
   inset: 0;
+
+  width: 100%;
+  height: 100%;
+
   z-index: 1000;
+
+  /* MARKAZLASH */
   align-items: center;
   justify-content: center;
+
   padding: 20px;
+  box-sizing: border-box;
+
   background: rgba(1, 7, 18, .78);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
+
+/* SAVOL KARTASI */
+
 .modal-box {
+  position: relative;
+
   width: min(900px, 94vw);
   max-height: 90vh;
+
+  margin: 0 auto;
+
   overflow-y: auto;
+
   padding: clamp(24px, 5vw, 46px);
+
+  box-sizing: border-box;
+
   border: 1px solid rgba(255,255,255,.20);
   border-radius: 25px;
+
   color: #f8fafc;
+
   background:
     linear-gradient(
       145deg,
       rgba(19,45,82,.93),
       rgba(7,17,31,.95)
     );
+
   box-shadow:
     0 30px 80px rgba(0,0,0,.48),
     inset 0 1px 0 rgba(255,255,255,.10);
+
   text-align: center;
+
+  /* MUHIM */
+  flex-shrink: 0;
 }
+
+
+/* MODAL ICHIDAGI SAVOL QISMI */
 
 .modal-box h2 {
   margin-bottom: 20px;
 }
 
+
 #qText {
   margin-bottom: 24px;
+
   color: #e0f2fe;
+
   font-size: clamp(30px, 5vw, 56px);
   font-weight: 950;
   line-height: 1.12;
-  text-shadow: 0 0 24px rgba(34,211,238,.16);
+
+  text-shadow:
+    0 0 24px rgba(34,211,238,.16);
 }
+
 
 #aText {
   margin: 22px 0;
+
   color: #bbf7d0;
+
   font-size: clamp(25px, 4vw, 48px);
   font-weight: 850;
   line-height: 1.18;
-  text-shadow: 0 0 20px rgba(34,197,94,.14);
+
+  text-shadow:
+    0 0 20px rgba(34,197,94,.14);
 }
+
 
 #timer {
   margin: 16px 0 20px;
+
   color: #fda4af;
+
   font-size: clamp(48px, 7vw, 72px);
   font-weight: 950;
   line-height: 1;
-  text-shadow: 0 0 25px rgba(239,68,68,.22);
+
+  text-shadow:
+    0 0 25px rgba(239,68,68,.22);
 }
+
 
 .timer {
   color: #fda4af;
@@ -882,65 +931,107 @@ label {
   font-weight: 900;
 }
 
+
 .timer-animate {
   animation: tick .28s ease;
 }
+
 
 .timer-last {
   color: #ff5252 !important;
   animation: danger .55s infinite;
 }
 
+
 @keyframes tick {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.18); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.18);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
+
 @keyframes danger {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.12); }
+  0%, 100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.12);
+  }
 }
+
 
 /* =========================
    12. BONUS EFFECT
 ========================= */
+
 .bonusEffect {
   position: fixed;
+
   top: 42%;
   left: 50%;
+
   z-index: 9999;
+
   transform: translate(-50%, -50%) scale(.6);
+
   color: #fde047;
+
   font-size: clamp(34px, 6vw, 70px);
   font-weight: 950;
   line-height: 1;
+
   white-space: nowrap;
+
   text-shadow:
     0 0 12px rgba(245,158,11,.65),
     0 0 34px rgba(239,68,68,.45);
+
   pointer-events: none;
+
   animation: bonusPop 1.8s ease-out forwards;
 }
 
+
 @keyframes bonusPop {
+
   0% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(.45);
+    transform:
+      translate(-50%, -50%)
+      scale(.45);
   }
+
   25% {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1.08);
+    transform:
+      translate(-50%, -50%)
+      scale(1.08);
   }
+
   70% {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+    transform:
+      translate(-50%, -50%)
+      scale(1);
   }
+
   100% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(1.04);
+    transform:
+      translate(-50%, -50%)
+      scale(1.04);
   }
 }
+
 
 .hidden {
   display: none !important;
