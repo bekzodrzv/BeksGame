@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="uz">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,165 +7,289 @@
   <link rel="stylesheet" href="game.css">
 </head>
 
-
 <body>
 
-  <h1>
-    <img src="fastlogo.png" alt="Logo" class="brand-logo">
-  <span class="brand-main">Beks Game</span>
-  <span class="brand-sub">
-    Top <span class="brand-f">F</span>ast Education
-  </span>
-</h1>
+  <!-- =========================
+       TOP BAR
+  ========================== -->
+  <header class="appHeader">
+    <div class="brand">
+      <div class="brandMark">
+        <img src="fastlogo.png" alt="Fast Education">
+      </div>
+      <div class="brandText">
+        <div class="brand-main">Beks Game</div>
+        <div class="brand-sub">Top <span class="brand-f">F</span>ast Education</div>
+      </div>
+    </div>
 
-<!-- Account Settings Modal -->
-<div class="modal" id="accountModal">
-  <div class="modal-box">
-    <h2>Profil sozlamalari</h2>
-    <label for="displayNameInput"></label>
-    <input type="text" id="displayNameInput" placeholder="Ismingiz">
-    <br><br>
-    <button class="bigBtn" id="saveProfileBtn">Saqlash</button>
-    <button class="bigBtn" onclick="closeAccountModal()">Yopish</button>
+    <div class="headerActions">
+      <button class="topBtn" id="accountBtn">👤 Profil</button>
+      <button class="topBtn dangerBtn" id="logoutBtn">↪ Chiqish</button>
+    </div>
+  </header>
+
+  <!-- =========================
+       ACCOUNT MODAL
+  ========================== -->
+  <div class="modal" id="accountModal">
+    <div class="modal-box accountBox">
+      <div class="modalHeader">
+        <div>
+          <span class="eyebrow">ACCOUNT</span>
+          <h2>Profil sozlamalari</h2>
+        </div>
+        <button class="iconBtn" onclick="closeAccountModal()">×</button>
+      </div>
+
+      <label for="displayNameInput">Ism</label>
+      <input type="text" id="displayNameInput" placeholder="Ismingiz">
+
+      <div class="modalActions">
+        <button class="bigBtn secondaryBtn" onclick="closeAccountModal()">Yopish</button>
+        <button class="bigBtn primaryBtn" id="saveProfileBtn">Saqlash</button>
+      </div>
+    </div>
   </div>
-</div>
 
-<!-- Account Settings button (Logout yonida) -->
-<button class="bigBtn" id="accountBtn">Profil</button>
+  <!-- =========================
+       MAIN APP
+  ========================== -->
+  <main class="app">
 
-  <!-- Logout -->
-  <button class="bigBtn" id="logoutBtn">Chiqish</button>
+    <!-- GAME HERO -->
+    <section class="gameHero">
+      <div class="heroInfo">
+        <span class="eyebrow">LIVE QUIZ ARENA</span>
+        <h1>Bilimingizni sinang.</h1>
+        <p>Jamoani tanlang, savolni oching va eng yuqori natijani qo‘lga kiriting.</p>
+      </div>
 
-  <!-- Categories -->
-  <div class="categories">
-    <div>1</div>
-    <div>2</div>
-    <div>3</div>
-    <div>4</div>
-    <div>5</div>
-  </div>
+      <div class="heroStatus">
+        <div class="statusDot"></div>
+        <span>O‘yin maydoni</span>
+      </div>
+    </section>
 
-  <!-- Game board -->
-  <div class="board" id="board"></div>
-  <div id="bonusEffect" class="bonusEffect hidden">🔥 2X BONUS 🔥</div>
-  <audio id="bonusSound" src="bonus.mp3" preload="auto"></audio>
+    <!-- QUESTION BOARD + LIVE PARTICIPANTS -->
+    <section class="gameStage">
+      <section class="gameBoardCard">
+        <div class="sectionHead">
+          <div>
+            <span class="eyebrow">QUESTION BOARD</span>
+            <h2>Savollar maydoni</h2>
+          </div>
+          <div class="boardHint">1 → 5 kategoriya</div>
+        </div>
+        <div class="categories">
+          <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div>
+        </div>
+        <div class="board" id="board"></div>
+        <div id="bonusEffect" class="bonusEffect hidden">🔥 2X BONUS 🔥</div>
+
+        <section class="controlDock">
+
+          <div class="toolBox">
+
+        <div class="inlineForm">
+            <div class="field compactField">
+              <label for="pointStepInput">BALL</label>
+              <input type="number" id="pointStepInput" value="100" min="1">
+            </div>
+
+            <div class="field compactField">
+              <label for="pointModeSelect">REJIM</label>
+              <select id="pointModeSelect">
+                <option value="fixed">Bir xil</option>
+                <option value="progressive">100-200-300</option>
+              </select>
+            </div>
+
+            <button class="smallBtn" onclick="updatePointSettings()">Saqlash</button>
+          </div>
+          </div>
+        
+          <div class="toolBox">
+        <div class="controlContent">
+          <span class="eyebrow">RANDOMIZER</span>
+          <button class="bigBtn secondaryBtn wideBtn" onclick="shuffleQuestionsByButton()">
+            🔀 Savollarni aralashtirish
+          </button>
+        </div>
+        </div>
+
+        
+        <div class="toolBox timerTool">
+          <span class="toolTitle">⏱ Savol vaqti</span>
+          <div class="toolRow">
+            <input type="number" id="timerInput" min="1" max="300" value="10">
+            <span class="unit">sekund</span>
+            <button class="bigBtn secondaryBtn" onclick="updateTimer()">O‘zgartirish</button>
+          </div>
+        </div>
+        </section>
+      
+      </section>
+
+      <aside class="liveParticipantsPanel panel">
+        <div class="panelHead">
+          <div>
+            <span class="eyebrow">LIVE LEADERBOARD</span>
+            <h3>Ishtirokchilar</h3>
+            <button class="bigBtn primaryBtn wideBtn" onclick="addParticipant()">
+            🧑 Ishtirokchi qo‘shish
+          </button>
+        <div id="participantsBox" class="participantsBox"></div>
+      </aside>
+    </section>
+
+    <!-- SOUNDS -->
+    <audio id="bonusSound" src="bonus.mp3" preload="auto"></audio>
+    <audio id="clickSound" src="click.mp3.wav"></audio>
+    <audio id="winnerSound" src="cheer.mp3.wav"></audio>
+
+     <!-- =========================
+         TOPIC LIBRARY
+    ========================== -->
+    <section class="panel topicLibrary">
+
+      <div class="panelHead topicMainHead">
+        <div>
+          <span class="eyebrow">QUESTION LIBRARY</span>
+          <h2>Mavzular</h2>
+          <p class="panelDescription">O‘zingiz yaratgan yoki boshqa foydalanuvchilar ulashgan mavzuni tanlang.</p>
+        </div>
+      </div>
+
+      <!-- CREATE / IMPORT TOOLS -->
+      <div class="topicTools">
+
+        <div class="toolBox">
+          <span class="toolTitle">Yangi mavzu</span>
+          <div class="toolRow">
+            <input type="text" id="newUserTopicTitle" placeholder="Yangi topic nomi">
+            <button class="bigBtn primaryBtn" onclick="addUserTopic()">Qo‘shish</button>
+            <button class="bigBtn secondaryBtn" id="downloadTemplateBtn">📄 Shablon</button>
+          </div>
+        </div>
+
+        <div class="toolBox">
+          <span class="toolTitle">Excel</span>
+          <div class="toolRow">
+            <input type="file" id="userTopicExcelInput">
+            <button class="bigBtn secondaryBtn" onclick="importExcelForUserTopic()">Excel’dan yuklash</button>
+          </div>
+        </div>
 
 
-  <!-- Question Modal -->
+      </div>
+
+      <!-- MY TOPICS -->
+      <div class="topicBlock">
+        <div class="topicBlockHead">
+          <h3>📚 Mening mavzularim</h3>
+          <span>O‘yin uchun tanlang</span>
+        </div>
+        <div id="userTopicPanel"></div>
+      </div>
+
+      <!-- OTHER TOPICS -->
+      <div class="topicBlock">
+        <div class="topicBlockHead">
+          <div>
+            <h3>🌐 Boshqa foydalanuvchilar mavzulari</h3>
+            <span>Ulashilgan mavzular</span>
+          </div>
+
+          <div class="otherTopicSearch">
+            <input type="text" id="otherTopicSearchInput" placeholder="Mavzu nomi bo‘yicha qidirish...">
+          </div>
+        </div>
+
+        <div id="otherTopicPanel"></div>
+      </div>
+
+    </section>
+
+   
+
+    <!-- ACTIVE TEAMS -->
+    <section class="teamsSection">
+      <div class="sectionHead">
+        <div>
+          <span class="eyebrow">LIVE SCOREBOARD</span>
+          <h2>O‘yindagi jamoalar</h2>
+        </div>
+        <span class="sectionBadge">LIVE</span>
+      </div>
+
+      <div class="teams" id="teams"></div>
+    </section>
+
+    <!-- =========================
+         LOWER DASHBOARD
+    ========================== -->
+    <section class="dashboardGrid">
+
+      <!-- HISTORY -->
+      <div id="gameHistory" class="panel historyBox">
+        <div class="panelHead">
+          <div>
+            <span class="eyebrow">MATCH CENTER</span>
+            <h2>📜 O‘yinlar tarixi</h2>
+          </div>
+        </div>
+        <div id="historyList"></div>
+      </div>
+
+    </section>
+
+   
+
+  </main>
+
+  <!-- =========================
+       QUESTION MODAL
+  ========================== -->
   <div class="modal" id="modal">
-    <div class="modal-box">
-      <h2 id="qText"></h2>
-      <button class="bigBtn" onclick="showAnswer()">Javobni ko‘rsat</button>
-      <p id="aText" class="hidden"></p>
-      <div id="timer">10</div>
+    <div class="modal-box questionBox">
+
+      <div class="questionTop">
+        <span class="eyebrow">QUESTION</span>
+        <div id="timer">10</div>
+      </div>
+
+      <div class="questionBody">
+        <div id="qText"></div>
+        <p id="aText" class="hidden"></p>
+      </div>
+
+      <div class="questionActions">
+         <button class="bigBtn secondaryBtn" onclick="closeModal()">Yopish</button>
+        <button class="bigBtn secondaryBtn" onclick="handleTimeExpired()">⏭ Javob bermadim</button>
+      </div>
+
       <audio id="tickSound" src="tick.mp3" preload="auto"></audio>
-      <button class="bigBtn" onclick="closeModal()">Yopish</button>
     </div>
   </div>
 
-<audio id="clickSound" src="click.mp3.wav"></audio>
-<audio id="winnerSound" src="cheer.mp3.wav"></audio>
-
-
-  <!-- Teams -->
-  <div class="teamAdd">
-
-  <!-- CHAP -->
-  <div class="leftControls">
-    <div class="settingsBox">
-      <label>Ball:</label>
-      <input type="number" id="pointStepInput" value="100" min="1">
-
-      <label>Rejim:</label>
-      <select id="pointModeSelect">
-        <option value="fixed">Bir xil</option>
-        <option value="progressive">100-200-300</option>
-      </select>
-
-      <button onclick="updatePointSettings()">Saqlash</button>
-    </div>
-  </div>
-
-  <!-- O'RTA team qo`shish tugmasi eskisi--> 
-  <div class="centerControls">
-    <!--<input type="text" id="teamNameInput" placeholder="Team nomi">
-    <button class="bigBtn" onclick="addTeam()">Team qo‘shish</button>-->
-
-    <button class="bigBtn" onclick="addParticipant()">
-  🧑 Ishtirokchi qo‘shish
-</button>
-  </div>
-
-  <!-- O'NG -->
-  <div class="rightControls">
-    <button class="shBtn" onclick="shuffleQuestionsByButton()">
-      🔀 Savollarni aralashtirish
-    </button>
-  </div>
-
-</div>
-  <div class="teams" id="teams"></div>
-<!-- 🧑‍🤝‍🧑 ISHTIROKCHILAR LISTI -->
- <div class="participantsHeader">
-  <button id="toggleParticipantsBtn" class="bigBtn">
-    👥 Barchasini ko‘rsatish
-  </button>
-</div>
-
-<div id="participantsBox" class="participantsBox"></div>
-
-  
-  <!-- TOPIC PANEL (MUSTAQIL) -->
-<div id="userTopicPanel"></div>
-
-
-
-<h2>Boshqa foydalanuvchilar mavzulari</h2>
-
-<div class="otherTopicSearch">
-  <input type="text" id="otherTopicSearchInput" placeholder="Mavzu nomi bo‘yicha qidirish...">
-</div>
-
-<div id="otherTopicPanel"></div>
-  
-  <!-- GAME HISTORY -->
-<div id="gameHistory" class="historyBox">
-  <h2>📜 O‘yinlar tarixi</h2>
-  <div id="historyList"></div>
-</div>
-
-<button class="bigBtn" id="downloadTemplateBtn">📄 Shablon yuklash</button>
-<input type="text" id="newUserTopicTitle" placeholder="Yangi topic nomi">
-<button class="bigBtn" onclick="addUserTopic()">Qo‘shish</button>
-
-<input type="file" id="userTopicExcelInput">
-<button class="bigBtn" onclick="importExcelForUserTopic()">Excel’dan yuklash</button>
-
-
-<div class="timeredit">
-<label class="secund"for="timerInput">Savol vaqti (sekund):</label>
-<input type="number" id="timerInput" min="1" max="300" value="10">
-<button class="bigBtn" onclick="updateTimer()">O‘zgartirish</button>
-</div>
-
-
-  <!-- Winner Modal -->
+  <!-- =========================
+       WINNER
+  ========================== -->
   <div id="winnerModal">
-    <div id="winnerText"></div>
-    <div id="restWinners"></div>
+    <div class="winnerCard">
+      <span class="eyebrow">GAME COMPLETE</span>
+      <div id="winnerText"></div>
+      <div id="restWinners"></div>
+    </div>
     <canvas id="confetti"></canvas>
   </div>
 
-  <!-- History -->
   <div id="history"></div>
 
   <!-- XLSX doim game.js DAN OLDIN -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script type="module" src="game.js"></script>
 
-  <!-- game.js MODULE -->
-
 </body>
-
-
 </html>
