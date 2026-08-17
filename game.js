@@ -1503,6 +1503,22 @@ window.importExcelForUserTopic =
 /* ================= BOARD ================= */
 
 function renderBoard() {
+
+  const topicNameEl = $("currentTopicName");
+
+if (topicNameEl) {
+
+  const currentTopic =
+    userTopics.find(
+      t => t.id === currentUserTopicId
+    );
+
+  topicNameEl.textContent =
+    currentTopic
+      ? ` — ${currentTopic.title}`
+      : "";
+
+}
   const board =
     $("board");
 
@@ -1814,20 +1830,37 @@ function updateTurnIndicator() {
   }
 
   el.innerHTML = `
-    <span class="turnLabel">
-      NAVBAT
-    </span>
+  <span class="turnLabel">
+    NAVBAT
+  </span>
 
-    <strong>
-      ${escapeHtml(
-        team.name
-      )}
-    </strong>
+  <div class="turnParticipant">
 
-    <span class="turnPoints">
-      ${currentValue} ball
-    </span>
-  `;
+    <div class="turnParticipantImage">
+      <img
+        src="${
+          findParticipant(team.participantId)?.image ||
+          team.image ||
+          avatarData(team.name)
+        }"
+        alt=""
+      >
+    </div>
+
+    <div class="turnParticipantData">
+
+      <strong class="turnParticipantName">
+        ${escapeHtml(team.name)}
+      </strong>
+
+      <span class="turnParticipantPoints">
+        ${Number(team.score || 0)} ball
+      </span>
+
+    </div>
+
+  </div>
+`;
 }
 
 function getNextUnusedCell() {
