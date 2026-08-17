@@ -1438,44 +1438,73 @@ async function importExcelForUserTopic() {
       let index = 0;
 
       rows.forEach(r => {
-        const q =
-          r.Question ??
-          r.question ??
-          r.QUESTION;
 
-        const a =
-          r.Answer ??
-          r.answer ??
-          r.ANSWER;
+  const q =
+    r.Question ??
+    r.question ??
+    r.QUESTION ??
+    "";
 
-        if (!q || !a) return;
+  const a =
+    r.Answer ??
+    r.answer ??
+    r.ANSWER ??
+    "";
 
-        let cat =
-          index % 5;
+  if (!String(q).trim() || !String(a).trim()) {
+    return;
+  }
 
-        const c =
-          Number(
-            r.Category ??
-            r.category ??
-            r.CATEGORY
-          );
+  let cat =
+    index % 5;
 
-        if (
-          c >= 1 &&
-          c <= 5
-        ) {
-          cat = c - 1;
-        }
+  const c =
+    Number(
+      r.Category ??
+      r.category ??
+      r.CATEGORY
+    );
 
-        topic.questions[
-          cat
-        ].push({
-          q: String(q).trim(),
-          a: String(a).trim()
-        });
+  if (
+    c >= 1 &&
+    c <= 5
+  ) {
+    cat = c - 1;
+  }
 
-        index++;
-      });
+  /*
+   * 3-4-5 USTUNLARDAGI NOTO'G'RI JAVOBLAR
+   */
+  const wrongAnswers = [
+    r["Wrong Answer 1"],
+    r["Wrong Answer 2"],
+    r["Wrong Answer 3"]
+  ]
+    .map(
+      value =>
+        String(
+          value ?? ""
+        ).trim()
+    )
+    .filter(Boolean);
+
+  topic.questions[
+    cat
+  ].push({
+
+    q:
+      String(q).trim(),
+
+    a:
+      String(a).trim(),
+
+    wrongAnswers:
+      wrongAnswers
+
+  });
+
+  index++;
+});
 
       questions =
         questionsObjectToArray(
@@ -1654,23 +1683,163 @@ function shuffleArray(arr) {
 }
 
 function buildAnswerOptions(
-  correctAnswer
+  correctAnswer,
+  questionItem
 ) {
+
   const correct =
     String(
       correctAnswer ?? ""
     ).trim();
 
-  const wrong =
-    shuffleArray(
-      getAllAnswers().filter(
-        a => a !== correct
-      )
-    ).slice(0, 3);
+  if (!correct) {
+    return [];
+  }
+
+  const correctKey =
+    correct.toLowerCase();
+
+  /*
+   * ==========================================
+   * 1. EXCEL 3-4-5 USTUNLARIDAGI JAVOBLAR
+   * ==========================================
+   */
+
+  const manualWrong =
+    Array.isArray(
+      questionItem?.wrongAnswers
+    )
+      ? questionItem.wrongAnswers
+          .map(
+            answer =>
+              String(
+                answer ?? ""
+              ).trim()
+          )
+          .filter(Boolean)
+      : [];
+
+
+  const wrongAnswers = [];
+
+
+  /*
+   * Excel'dan berilgan noto'g'ri
+   * javoblarni qo'shamiz
+   */
+
+  manualWrong.forEach(
+    answer => {
+
+      const key =
+        answer.toLowerCase();
+
+      if (!key) {
+        return;
+      }
+
+      if (
+        key === correctKey
+      ) {
+        return;
+      }
+
+      if (
+        wrongAnswers.some(
+          x =>
+            x.toLowerCase() ===
+            key
+        )
+      ) {
+        return;
+      }
+
+      wrongAnswers.push(
+        answer
+      );
+    }
+  );
+
+
+  /*
+   * ==========================================
+   * 2. AGAR 3 TA TO'LMAGAN BO'LSA
+   *    ESKI TIZIMDAGI KABI BOSHQA
+   *    SAVOLLARDAN JAVOB OLAMIZ
+   * ==========================================
+   */
+
+  if (
+    wrongAnswers.length < 3
+  ) {
+
+    const fallback =
+      getAllAnswers()
+        .filter(
+          answer => {
+
+            const key =
+              String(
+                answer
+              ).trim()
+                .toLowerCase();
+
+            if (!key) {
+              return false;
+            }
+
+            if (
+              key ===
+              correctKey
+            ) {
+              return false;
+            }
+
+            return !wrongAnswers.some(
+              x =>
+                x.toLowerCase() ===
+                key
+            );
+          }
+        );
+
+
+    const shuffled =
+      shuffleArray(
+        fallback
+      );
+
+
+    for (
+      const answer
+      of shuffled
+    ) {
+
+      if (
+        wrongAnswers.length >= 3
+      ) {
+        break;
+      }
+
+      wrongAnswers.push(
+        answer
+      );
+    }
+  }
+
+
+  /*
+   * ==========================================
+   * 3. TO'G'RI + 3 TA NOTO'G'RI
+   * ==========================================
+   */
 
   return shuffleArray([
     correct,
-    ...wrong
+    ...wrongAnswers.slice(
+      0,
+      3
+    )
   ]);
 }
 
@@ -2000,13 +2169,14 @@ function openQ(
   );
 
   renderAnswerOptions(
-    buildAnswerOptions(
-      item.a ??
-      item.answer
-    ),
+  buildAnswerOptions(
     item.a ??
-      item.answer
-  );
+    item.answer,
+    item
+  ),
+  item.a ??
+    item.answer
+);
 
   updateTurnIndicator();
 
@@ -3698,19 +3868,28 @@ $("downloadTemplateBtn")
         XLSX.utils.aoa_to_sheet(
           [
             [
-              "Question",
-              "Answer"
-            ],
+  "Question",
+  "Answer",
+  "Wrong Answer 1",
+  "Wrong Answer 2",
+  "Wrong Answer 3"
+],
 
-            [
-              "Savol matni",
-              "Javob matni"
-            ],
+[
+  "Savol matni",
+  "To'g'ri javob",
+  "Noto'g'ri javob 1",
+  "Noto'g'ri javob 2",
+  "Noto'g'ri javob 3"
+],
 
-            [
-              "Savol matni",
-              "Javob matni"
-            ]
+[
+  "Savol matni",
+  "To'g'ri javob",
+  "Noto'g'ri javob 1",
+  "Noto'g'ri javob 2",
+  "Noto'g'ri javob 3"
+]
           ]
         );
 
