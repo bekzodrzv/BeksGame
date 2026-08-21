@@ -53,6 +53,36 @@
   </div>
 
   <!-- =========================
+       TOPIC INTRO / PLAY MODAL
+  ========================== -->
+  <div class="modal" id="topicIntroModal">
+    <div class="modal-box introBox">
+      <div class="modalHeader">
+        <div>
+          <span class="eyebrow">GAME BRIEFING</span>
+          <h2 id="introTopicTitle">O‘yin haqida</h2>
+        </div>
+        <button class="iconBtn" onclick="closeTopicIntroModal()">×</button>
+      </div>
+
+      <div class="introSection">
+        <span class="toolTitle">Ishtirokchilar</span>
+        <div class="introParticipants" id="introParticipants"></div>
+      </div>
+
+      <div class="introSection">
+        <span class="toolTitle">Ball tizimi qanday ishlaydi</span>
+        <div class="introRules" id="introRules"></div>
+      </div>
+
+      <div class="modalActions">
+        <button class="bigBtn secondaryBtn" onclick="closeTopicIntroModal()">Yopish</button>
+        <button class="bigBtn primaryBtn" id="introPlayBtn">▶ Play</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================
        MAIN APP
   ========================== -->
   <main class="app">
@@ -84,10 +114,11 @@
           </div>
           <div class="boardHint">1 → 5 kategoriya</div>
         </div>
-        <div class="categories">
-          <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div>
-        </div>
-        <div class="board" id="board"></div>
+        <div
+  class="topicBoard"
+  id="board"
+>
+</div>
         <div id="bonusEffect" class="bonusEffect hidden">🔥 2X BONUS 🔥</div>
 
         <section class="controlDock">
@@ -139,9 +170,11 @@
           <div>
             <span class="eyebrow">LIVE LEADERBOARD</span>
             <h3>Ishtirokchilar</h3>
-            <button class="bigBtn primaryBtn wideBtn" onclick="addParticipant()">
+          </div>
+          <button class="bigBtn primaryBtn wideBtn" onclick="addParticipant()">
             🧑 Ishtirokchi qo‘shish
           </button>
+        </div>
         <div id="participantsBox" class="participantsBox"></div>
       </aside>
     </section>
@@ -179,6 +212,7 @@
         <div class="toolBox">
           <span class="toolTitle">Excel</span>
           <div class="toolRow">
+            <select id="userTopicExcelTarget" class="excelTargetSelect"></select>
             <input type="file" id="userTopicExcelInput">
             <button class="bigBtn secondaryBtn" onclick="importExcelForUserTopic()">Excel’dan yuklash</button>
           </div>

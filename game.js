@@ -24,6 +24,7 @@ let currentUserTopicId = null;
 let userTopics = [];
 let pointStep = 100;
 let pointMode = "fixed";
+let pendingIntroTopic = null;
 let participants = [];
 let currentQuestionMultiplier = 1;
 let currentQuestionItem = null;
@@ -32,6 +33,8 @@ let currentQuestionActive = false;
 let gameFinalized = false;
 let confettiFrame = null;
 let winnerTimer = null;
+let currentTopicQuestionIndex = 0;
+let currentTopicQuestions = [];
 
 const $ = id => document.getElementById(id);
 const clickSound = $("clickSound");
@@ -868,16 +871,7 @@ document.addEventListener(
 
 /* ================= TEAMS ================= */
 
-function addSelectedParticipantToTeam(
-  participant
-) {
-  addTeamWithParticipant(
-    participant
-  );
-}
-
-window.addSelectedParticipantToTeam =
-  addSelectedParticipantToTeam;
+window.addSelectedParticipantToTeam = addTeamWithParticipant;
 
 function addTeamWithParticipant(
   participant
@@ -1187,15 +1181,11 @@ function renderUserTopics() {
           ${total} ta savol
         </span>
 
-        <div class="topicActions">
-          <button class="editBtn">
-            ✏️
-          </button>
-
-          <button class="deleteBtn">
-            🗑
-          </button>
-        </div>
+        <small>
+          👤 ${escapeHtml(
+            topic.ownerName
+          )}
+        </small>
       `;
 
       div.onclick =
@@ -1204,29 +1194,36 @@ function renderUserTopics() {
             topic.id
           );
 
-      div.querySelector(
-        ".editBtn"
-      ).onclick = e => {
-        e.stopPropagation();
-        editUserTopicTitle(
-          topic.id
-        );
-      };
+      const editBtn = div.querySelector(".editBtn");
+      if (editBtn) {
+        editBtn.onclick = e => {
+          e.stopPropagation();
+          editUserTopicTitle(topic.id);
+        };
+      }
 
-      div.querySelector(
-        ".deleteBtn"
-      ).onclick = e => {
-        e.stopPropagation();
-        deleteUserTopic(
-          topic.id
-        );
-      };
+      const deleteBtn = div.querySelector(".deleteBtn");
+      if (deleteBtn) {
+        deleteBtn.onclick = e => {
+          e.stopPropagation();
+          deleteUserTopic(topic.id);
+        };
+      }
 
       container.appendChild(
         div
       );
     }
   );
+
+  /*
+   * "Mening mavzularim" ro'yxati
+   * o'zgarsa, savollar maydoni (board)
+   * va Excel maqsad tanlovi ham
+   * shu zahoti yangilansin.
+   */
+  renderBoard();
+  renderExcelTargetOptions();
 }
 
 async function addUserTopic() {
@@ -1275,9 +1272,11 @@ window.addUserTopic =
 function selectUserTopic(
   topicId
 ) {
+
   const topic =
     userTopics.find(
-      t => t.id === topicId
+      t =>
+        t.id === topicId
     );
 
   if (!topic) return;
@@ -1295,7 +1294,16 @@ function selectUserTopic(
       topic.questions
     );
 
+  /*
+   * QUESTION BOARD
+   */
   renderBoard();
+
+  /*
+   * Mening mavzularim panelidagi
+   * eski tanlovni ham yangilaymiz
+   */
+  renderUserTopics();
 }
 
 window.selectUserTopic =
@@ -1373,10 +1381,80 @@ async function deleteUserTopic(
 window.deleteUserTopic =
   deleteUserTopic;
 
+function renderExcelTargetOptions() {
+
+  const select =
+    $("userTopicExcelTarget");
+
+  if (!select) return;
+
+  const prevValue =
+    select.value;
+
+  select.innerHTML = "";
+
+  if (!userTopics.length) {
+
+    const opt =
+      document.createElement("option");
+
+    opt.value = "";
+    opt.textContent =
+      "Avval mavzu yarating";
+
+    select.appendChild(opt);
+
+    select.disabled = true;
+
+    return;
+  }
+
+  select.disabled = false;
+
+  userTopics.forEach(topic => {
+
+    const opt =
+      document.createElement("option");
+
+    opt.value = topic.id;
+    opt.textContent =
+      topic.title;
+
+    select.appendChild(opt);
+
+  });
+
+  const stillExists =
+    userTopics.some(
+      t => t.id === prevValue
+    );
+
+  const fallback =
+    currentUserTopicId &&
+    userTopics.some(
+      t => t.id === currentUserTopicId
+    )
+      ? currentUserTopicId
+      : userTopics[
+          userTopics.length - 1
+        ].id;
+
+  select.value =
+    stillExists
+      ? prevValue
+      : fallback;
+}
+
 async function importExcelForUserTopic() {
-  if (!currentUserTopicId) {
+
+  const targetId =
+    $("userTopicExcelTarget")
+      ?.value ||
+    currentUserTopicId;
+
+  if (!targetId) {
     return alert(
-      "Avval topic tanlang!"
+      "Avval mavzuni tanlang!"
     );
   }
 
@@ -1394,7 +1472,7 @@ async function importExcelForUserTopic() {
     userTopics.find(
       t =>
         t.id ===
-        currentUserTopicId
+        targetId
     );
 
   if (!topic) return;
@@ -1531,96 +1609,387 @@ window.importExcelForUserTopic =
 
 /* ================= BOARD ================= */
 
+/* =========================
+   TOPIC BOARD
+========================= */
+
+/* =========================
+   TOPIC BOARD
+========================= */
+
 function renderBoard() {
 
-  const topicNameEl = $("currentTopicName");
-
-if (topicNameEl) {
-
-  const currentTopic =
-    userTopics.find(
-      t => t.id === currentUserTopicId
-    );
-
-  topicNameEl.textContent =
-    currentTopic
-      ? ` — ${currentTopic.title}`
-      : "";
-
-}
-  const board =
-    $("board");
+  const board = $("board");
 
   if (!board) return;
 
   board.innerHTML = "";
 
-  const cats =
-    Array.isArray(questions)
-      ? questions
-      : Object.values(
-          questions || {}
-        );
+  if (
+    !Array.isArray(userTopics) ||
+    !userTopics.length
+  ) {
+    board.innerHTML = `
+      <div class="topicBoardEmpty">
+        📚 Hozircha mavzu mavjud emas
+      </div>
+    `;
+    return;
+  }
 
-  const maxRows =
-    Math.max(
-      0,
-      ...cats.map(
-        c => c.length
-      )
+  userTopics.forEach(topic => {
+
+    const card =
+      document.createElement("div");
+
+    card.className =
+      "topicBoardCard";
+
+    if (
+      topic.id ===
+      currentUserTopicId
+    ) {
+      card.classList.add("selected");
+    }
+
+    const total =
+      Object.values(
+        topic.questions || {}
+      ).reduce(
+        (sum, category) =>
+          sum +
+          (
+            Array.isArray(category)
+              ? category.length
+              : 0
+          ),
+        0
+      );
+
+    card.innerHTML = `
+      <div class="topicBoardIcon">
+        📚
+      </div>
+
+      <div class="topicBoardInfo">
+
+        <strong>
+          ${escapeHtml(topic.title)}
+        </strong>
+
+        <span>
+          ${total} ta savol
+        </span>
+
+        ${
+          topic.id === currentUserTopicId
+            ? `
+              <small>
+                ✓ TANLANGAN
+              </small>
+            `
+            : ""
+        }
+
+      </div>
+
+      <div class="topicStartOverlay">
+        <span>▶</span>
+        <strong>O‘YINNI BOSHLASH</strong>
+      </div>
+    `;
+
+    card.onclick = () => {
+
+      openTopicIntro(
+        topic
+      );
+
+    };
+
+    board.appendChild(card);
+
+  });
+}
+
+/* ================= TOPIC INTRO / PLAY MODAL ================= */
+
+function openTopicIntro(topic) {
+
+  if (!topic) return;
+
+  if (
+    !Array.isArray(teamsData) ||
+    !teamsData.length
+  ) {
+
+    alert(
+      "Avval ishtirokchini o‘yinga qo‘shing!"
     );
 
-  for (
-    let r = 0;
-    r < maxRows;
-    r++
-  ) {
-    for (
-      let c = 0;
-      c < 5;
-      c++
-    ) {
-      const item =
-        cats[c]?.[r];
+    return;
+  }
 
-      const cell =
-        document.createElement(
-          "div"
-        );
+  if (gameFinalized) return;
 
-      cell.className =
-        "cell";
+  pendingIntroTopic = topic;
 
-      if (!item) {
-        cell.classList.add(
-          "used"
-        );
-      } else {
-        const score =
-          pointMode === "fixed"
-            ? pointStep
-            : (r + 1) *
-              pointStep;
+  const titleEl =
+    $("introTopicTitle");
 
-        cell.textContent =
-          score;
+  if (titleEl) {
+    titleEl.textContent =
+      topic.title ||
+      "O‘yin haqida";
+  }
 
-        cell.onclick =
-          () =>
-            openQ(
-              cell,
-              item,
-              score
-            );
-      }
+  renderIntroParticipants();
+  renderIntroRules();
 
-      board.appendChild(
-        cell
-      );
-    }
+  const modal =
+    $("topicIntroModal");
+
+  if (modal) {
+
+    modal.style.display =
+      "flex";
+
+    modal.classList.add(
+      "show"
+    );
+
   }
 }
 
+function renderIntroParticipants() {
+
+  const box =
+    $("introParticipants");
+
+  if (!box) return;
+
+  box.innerHTML = "";
+
+  if (!teamsData.length) {
+
+    box.innerHTML = `
+      <span class="introEmpty">
+        Hozircha ishtirokchi yo‘q
+      </span>
+    `;
+
+    return;
+  }
+
+  teamsData.forEach(team => {
+
+    const card =
+      document.createElement("div");
+
+    card.className =
+      "introParticipantCard";
+
+    card.innerHTML = `
+      <img
+        class="introAvatar"
+        src="${
+          team.image ||
+          avatarData(team.name)
+        }"
+        alt=""
+      >
+      <span>
+        ${escapeHtml(team.name)}
+      </span>
+    `;
+
+    box.appendChild(card);
+
+  });
+}
+
+function renderIntroRules() {
+
+  const box =
+    $("introRules");
+
+  if (!box) return;
+
+  const step =
+    Number(pointStep) || 100;
+
+  box.innerHTML = `
+    <ul class="introRulesList">
+      <li>
+        ✅ To‘g‘ri javob — <strong>+${step} ball</strong>
+      </li>
+      <li>
+        ❌ Noto‘g‘ri javob yoki vaqt tugashi — <strong>−${step} ball</strong>
+      </li>
+      <li>
+        🔥 Savol oldida "2x", "3x" kabi belgi bo‘lsa, o‘sha savol uchun ball shuncha marta ko‘payadi
+      </li>
+      <li>
+        ⏱ Har bir savolga javob berish uchun belgilangan vaqt beriladi, vaqt tugasa ball ayiriladi
+      </li>
+    </ul>
+  `;
+}
+
+function closeTopicIntroModal() {
+
+  const modal =
+    $("topicIntroModal");
+
+  if (modal) {
+
+    modal.style.display =
+      "none";
+
+    modal.classList.remove(
+      "show"
+    );
+
+  }
+
+  pendingIntroTopic = null;
+}
+
+window.closeTopicIntroModal =
+  closeTopicIntroModal;
+
+function confirmStartTopicGame() {
+
+  if (!pendingIntroTopic) return;
+
+  const topic =
+    pendingIntroTopic;
+
+  closeTopicIntroModal();
+
+  selectUserTopic(
+    topic.id
+  );
+
+  startTopicGame(
+    topic
+  );
+}
+
+function startTopicGame(topic) {
+
+  if (!topic) return;
+
+  if (!Array.isArray(teamsData) ||
+      !teamsData.length) {
+
+    alert(
+      "Avval ishtirokchini o‘yinga qo‘shing!"
+    );
+
+    return;
+  }
+
+  if (gameFinalized) return;
+
+  currentUserTopicId =
+    topic.id;
+
+  localStorage.setItem(
+    "lastTopicId",
+    topic.id
+  );
+
+  /*
+   * Tanlangan mavzudagi barcha
+   * savollarni bitta massivga yig‘amiz
+   */
+  currentTopicQuestions = [];
+
+  Object.values(
+    topic.questions || {}
+  ).forEach(category => {
+
+    if (!Array.isArray(category)) {
+      return;
+    }
+
+    category.forEach(item => {
+
+      if (item) {
+        currentTopicQuestions.push(item);
+      }
+
+    });
+
+  });
+
+  if (!currentTopicQuestions.length) {
+
+    alert(
+      "Bu mavzuda savollar mavjud emas!"
+    );
+
+    return;
+  }
+
+  /*
+   * Hozirgi savoldan boshlaymiz
+   */
+  currentTopicQuestionIndex = 0;
+
+  /*
+   * Eski answer-options tizimi
+   * uchun questionsni ham yangilaymiz.
+   */
+  questions = [
+    currentTopicQuestions
+  ];
+
+  /*
+   * Birinchi savol
+   */
+  openTopicQuestion();
+}
+
+function openTopicQuestion() {
+
+  if (
+    !currentTopicQuestions.length
+  ) {
+    return;
+  }
+
+  const item =
+    currentTopicQuestions[
+      currentTopicQuestionIndex
+    ];
+
+  if (!item) {
+
+    declareWinner();
+
+    return;
+  }
+
+  /*
+   * Ball tizimi saqlanadi.
+   */
+  const score =
+    Number(pointStep) || 100;
+
+  /*
+   * Eski openQ modal tizimini
+   * ishlatamiz.
+   *
+   * Virtual cell kerak emas.
+   */
+  openQ(
+    null,
+    item,
+    score
+  );
+}
 /* ================= QUESTION ENGINE ================= */
 
 function getAllAnswers() {
@@ -1701,7 +2070,7 @@ function buildAnswerOptions(
 
   /*
    * ==========================================
-   * 1. EXCEL 3-4-5 USTUNLARIDAGI JAVOBLAR
+   * 1. EXCEL 3-4-5 USTUNLARDAGI JAVOBLAR
    * ==========================================
    */
 
@@ -1907,17 +2276,27 @@ function ensureTurnIndicatorUI() {
     el.className =
       "currentTurnIndicator";
 
+    /*
+     * Indikator .questionTop
+     * ICHIGA emas, undan KEYIN
+     * to'liq kenglikdagi qator
+     * sifatida joylashadi —
+     * shunda gorizontal ro'yxat
+     * uchun joy yetarli bo'ladi.
+     */
     const top =
       modalBox.querySelector(
         ".questionTop"
       );
 
-    top
-      ? top.insertBefore(
-          el,
-          top.firstChild
-        )
-      : modalBox.prepend(el);
+    if (top && top.parentNode) {
+      top.parentNode.insertBefore(
+        el,
+        top.nextSibling
+      );
+    } else {
+      modalBox.prepend(el);
+    }
   }
 
   return el;
@@ -1984,52 +2363,109 @@ function updateTurnIndicator() {
   const el =
     ensureTurnIndicatorUI();
 
-  const team =
-    teamsData[
-      currentTurnIndex
-    ];
-
   if (!el) return;
 
-  if (!team) {
-    el.textContent =
-      "👤 Ishtirokchi yo‘q";
+  if (!teamsData.length) {
+
+    el.innerHTML = `
+      <span class="turnLabel">
+        NAVBAT
+      </span>
+      <span class="turnEmpty">
+        👤 Ishtirokchi yo‘q
+      </span>
+    `;
 
     return;
   }
 
+  /*
+   * Navbatdagidan boshlab,
+   * qolgan hammasini aylanma
+   * tartibda joylashtiramiz —
+   * shunda "keyingi navbat kim"
+   * ekani ham darrov ko'rinadi.
+   */
+  const ordered = [];
+
+  for (
+    let i = 0;
+    i < teamsData.length;
+    i++
+  ) {
+
+    const idx =
+      (currentTurnIndex + i) %
+      teamsData.length;
+
+    ordered.push(
+      teamsData[idx]
+    );
+
+  }
+
+  const cardsHtml = ordered
+    .map((team, i) => {
+
+      const isCurrent =
+        i === 0;
+
+      const p =
+        findParticipant(
+          team.participantId
+        );
+
+      return `
+        <div class="turnParticipantCard${
+          isCurrent
+            ? " isCurrentTurn"
+            : ""
+        }">
+
+          ${
+            isCurrent
+              ? `<span class="turnBadge">NAVBAT</span>`
+              : ""
+          }
+
+          <div class="turnParticipantImage">
+            <img
+              src="${
+                p?.image ||
+                team.image ||
+                avatarData(team.name)
+              }"
+              alt=""
+            >
+          </div>
+
+          <div class="turnParticipantData">
+
+            <strong class="turnParticipantName">
+              ${escapeHtml(team.name)}
+            </strong>
+
+            <span class="turnParticipantPoints">
+              ${Number(team.score || 0)} ball
+            </span>
+
+          </div>
+
+        </div>
+      `;
+
+    })
+    .join("");
+
   el.innerHTML = `
-  <span class="turnLabel">
-    NAVBAT
-  </span>
+    <span class="turnLabel">
+      NAVBATLAR
+    </span>
 
-  <div class="turnParticipant">
-
-    <div class="turnParticipantImage">
-      <img
-        src="${
-          findParticipant(team.participantId)?.image ||
-          team.image ||
-          avatarData(team.name)
-        }"
-        alt=""
-      >
+    <div class="turnParticipantsRow">
+      ${cardsHtml}
     </div>
-
-    <div class="turnParticipantData">
-
-      <strong class="turnParticipantName">
-        ${escapeHtml(team.name)}
-      </strong>
-
-      <span class="turnParticipantPoints">
-        ${Number(team.score || 0)} ball
-      </span>
-
-    </div>
-
-  </div>
-`;
+  `;
 }
 
 function getNextUnusedCell() {
@@ -2085,28 +2521,31 @@ function openQ(
   item,
   score
 ) {
-  if (
-    !cell ||
-    cell.classList.contains(
-      "used"
-    ) ||
-    !item
-  ) {
+
+  if (!item) {
     return;
   }
 
   if (!teamsData.length) {
-    return alert(
+
+    alert(
       "Avval ishtirokchi qo‘shing!"
     );
+
+    return;
   }
 
-  if (gameFinalized) return;
+  if (gameFinalized) {
+    return;
+  }
 
   clearInterval(timer);
 
-  currentCell =
-    cell;
+  /*
+   * Yangi topic tizimida
+   * haqiqiy .cell yo‘q.
+   */
+  currentCell = null;
 
   currentValue =
     Number(score) || 0;
@@ -2136,6 +2575,7 @@ function openQ(
     );
 
   if (match) {
+
     currentQuestionMultiplier =
       Math.max(
         1,
@@ -2160,8 +2600,10 @@ function openQ(
   }
 
   if ($("qText")) {
+
     $("qText").textContent =
       questionText;
+
   }
 
   $("aText")?.classList.add(
@@ -2169,14 +2611,13 @@ function openQ(
   );
 
   renderAnswerOptions(
-  buildAnswerOptions(
+    buildAnswerOptions(
+      item.a ??
+      item.answer
+    ),
     item.a ??
-    item.answer,
-    item
-  ),
-  item.a ??
     item.answer
-);
+  );
 
   updateTurnIndicator();
 
@@ -2184,12 +2625,14 @@ function openQ(
     $("modal");
 
   if (modal) {
+
     modal.style.display =
       "flex";
 
     modal.classList.add(
       "show"
     );
+
   }
 
   clickSound
@@ -2198,9 +2641,6 @@ function openQ(
 
   startTimer();
 }
-
-window.openQ =
-  openQ;
 
 function startTimer() {
   clearInterval(timer);
@@ -2451,22 +2891,12 @@ function showAnswerResult(
 }
 
 function finishCurrentQuestionAndAdvance() {
-  if (
-    !currentQuestionActive
-  ) {
+
+  if (!currentQuestionActive) {
     return;
   }
 
   clearInterval(timer);
-
-  if (currentCell) {
-    currentCell.classList.add(
-      "used"
-    );
-
-    currentCell.textContent =
-      "";
-  }
 
   currentQuestionActive =
     false;
@@ -2480,12 +2910,9 @@ function finishCurrentQuestionAndAdvance() {
   currentQuestionMultiplier =
     1;
 
-  if (allQuestionsUsed()) {
-    closeModal(false);
-    declareWinner();
-    return;
-  }
-
+  /*
+   * Keyingi ishtirokchi
+   */
   currentTurnIndex =
     teamsData.length
       ? (
@@ -2494,50 +2921,40 @@ function finishCurrentQuestionAndAdvance() {
         teamsData.length
       : 0;
 
-  const nextCell =
-    getNextUnusedCell();
+  /*
+   * Keyingi savol
+   */
+  currentTopicQuestionIndex++;
 
-  const nextItem =
-    getCellQuestion(
-      nextCell
-    );
-
+  /*
+   * Barcha savollar tugagan bo‘lsa
+   */
   if (
-    !nextCell ||
-    !nextItem
+    currentTopicQuestionIndex >=
+    currentTopicQuestions.length
   ) {
+
+    closeModal(false);
+
     declareWinner();
+
     return;
   }
 
-  const nextScore =
-    Number(
-      nextCell.textContent
-    ) || pointStep;
-
-  openQ(
-    nextCell,
-    nextItem,
-    nextScore
-  );
+  /*
+   * Keyingi savolni ochamiz
+   */
+  openTopicQuestion();
 }
 
 function allQuestionsUsed() {
-  const cells = [
-    ...document.querySelectorAll(
-      "#board .cell"
-    )
-  ];
 
   return (
-    cells.length > 0 &&
-    cells.every(
-      c =>
-        c.classList.contains(
-          "used"
-        )
-    )
+    currentTopicQuestions.length > 0 &&
+    currentTopicQuestionIndex >=
+      currentTopicQuestions.length
   );
+
 }
 
 function finishQuestionRound() {
@@ -3350,107 +3767,88 @@ function stopConfetti() {
 /* ================= RESET / SHUFFLE ================= */
 
 function resetBoardOnly() {
+
   clearInterval(timer);
 
-  document
-    .querySelectorAll(
-      "#board .cell"
-    )
-    .forEach(cell => {
-      cell.classList.remove(
-        "used"
-      );
+  currentTopicQuestionIndex = 0;
 
-      const q =
-        getCellQuestion(
-          cell
-        );
+  currentQuestionActive = false;
+  currentQuestionItem = null;
+  currentCell = null;
+  currentQuestionMultiplier = 1;
 
-      if (q) {
-        const index =
-          [
-            ...document.querySelectorAll(
-              "#board .cell"
-            )
-          ].indexOf(cell);
+  gameFinalized = false;
+  gameInProgress = false;
 
-        const row =
-          Math.floor(
-            index / 5
-          );
-
-        cell.textContent =
-          pointMode ===
-          "fixed"
-            ? pointStep
-            : (row + 1) *
-              pointStep;
-      } else {
-        cell.classList.add(
-          "used"
-        );
-      }
-    });
+  currentTurnIndex = 0;
 
   teamsData.forEach(
-    t =>
-      (t.score = 0)
+    t => {
+      t.score = 0;
+    }
   );
 
-  gameFinalized =
-    false;
+  /*
+   * Tanlangan mavzu bo‘yicha
+   * savollarni qayta tayyorlaymiz
+   */
+  if (currentUserTopicId) {
 
-  gameInProgress =
-    false;
+    const topic =
+      userTopics.find(
+        t =>
+          t.id ===
+          currentUserTopicId
+      );
 
-  currentTurnIndex =
-    0;
+    if (topic) {
+
+      currentTopicQuestions = [];
+
+      Object.values(
+        topic.questions || {}
+      ).forEach(category => {
+
+        if (!Array.isArray(category)) {
+          return;
+        }
+
+        category.forEach(item => {
+
+          if (item) {
+            currentTopicQuestions.push(
+              item
+            );
+          }
+
+        });
+
+      });
+
+      questions = [
+        currentTopicQuestions
+      ];
+    }
+  }
 
   renderTeams();
   renderParticipants();
+  renderBoard();
 }
 
 window.resetBoardOnly =
   resetBoardOnly;
 
-function shuffleTopicQuestions() {
-  const all =
-    (
-      Array.isArray(
-        questions
-      )
-        ? questions
-        : Object.values(
-            questions || {}
-          )
-    ).flat();
+async function shuffleTopicQuestions() {
 
-  if (!all.length) {
-    return alert(
-      "Savollar mavjud emas!"
+  if (!currentUserTopicId) {
+
+    alert(
+      "Avval mavzuni tanlang!"
     );
+
+    return;
   }
-
-  const shuffled =
-    shuffleArray(all);
-
-  const next = [
-    [],
-    [],
-    [],
-    [],
-    []
-  ];
-
-  shuffled.forEach(
-    (q, i) =>
-      next[
-        i % 5
-      ].push(q)
-  );
-
-  questions =
-    next;
 
   const topic =
     userTopics.find(
@@ -3459,14 +3857,92 @@ function shuffleTopicQuestions() {
         currentUserTopicId
     );
 
-  if (topic) {
-    topic.questions =
-      next;
-
-    saveTopics();
+  if (!topic) {
+    return;
   }
 
+  const allQuestions = [];
+
+  Object.values(
+    topic.questions || {}
+  ).forEach(category => {
+
+    if (!Array.isArray(category)) {
+      return;
+    }
+
+    category.forEach(item => {
+
+      if (item) {
+        allQuestions.push(item);
+      }
+
+    });
+
+  });
+
+  if (allQuestions.length < 2) {
+
+    alert(
+      "Aralashtirish uchun savollar yetarli emas!"
+    );
+
+    return;
+  }
+
+  /*
+   * Fisher-Yates
+   */
+  for (
+    let i =
+      allQuestions.length - 1;
+    i > 0;
+    i--
+  ) {
+
+    const j =
+      Math.floor(
+        Math.random() *
+        (i + 1)
+      );
+
+    [
+      allQuestions[i],
+      allQuestions[j]
+    ] = [
+      allQuestions[j],
+      allQuestions[i]
+    ];
+
+  }
+
+  /*
+   * Muhim:
+   * 5 ta ustunga bo‘lmaymiz.
+   *
+   * Bitta massiv sifatida
+   * saqlaymiz.
+   */
+  topic.questions = {
+    shuffled: allQuestions
+  };
+
+  currentTopicQuestions =
+    allQuestions;
+
+  questions = [
+    allQuestions
+  ];
+
+  currentTopicQuestionIndex =
+    0;
+
+  await saveTopics();
+
+  renderUserTopics();
+
   renderBoard();
+
 }
 
 function shuffleQuestionsByButton() {
@@ -3759,6 +4235,13 @@ window.closeAccountModal =
     }
   };
 
+$("introPlayBtn")?.addEventListener(
+  "click",
+  () => {
+    confirmStartTopicGame();
+  }
+);
+
 saveProfileBtn?.addEventListener(
   "click",
   async () => {
@@ -3906,14 +4389,9 @@ $("downloadTemplateBtn")
     }
   );
 
-window.openQ =
-  openQ;
-
-window.closeModal =
-  closeModal;
-
-window.addTeamWithParticipant =
-  addTeamWithParticipant;
-
-window.addScore =
-  addScore;
+/* Final public exports (single place to avoid duplicates) */
+window.openQ = openQ;
+window.closeModal = closeModal;
+window.addTeamWithParticipant = addTeamWithParticipant;
+window.addSelectedParticipantToTeam = addTeamWithParticipant;
+window.addScore = addScore;

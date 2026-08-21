@@ -799,6 +799,7 @@ select option{background:#101c31;color:#fff}
 
 .toolRow input[type="text"]{min-width:0;width:100%}
 .toolRow input[type="file"]{min-width:0;width:100%;font-size:11px}
+.toolRow select.excelTargetSelect{min-width:0;width:100%}
 .timerTool input{width:85px}
 
 .unit{
@@ -975,6 +976,66 @@ select option{background:#101c31;color:#fff}
 }
 
 .questionBox{width:min(980px,94vw)}
+
+.introBox{width:min(720px,94vw)}
+
+.introSection{margin-top:18px}
+
+.introSection .toolTitle{
+  display:block;
+  margin-bottom:10px;
+  color:var(--muted);
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}
+
+.introParticipants{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+
+.introParticipantCard{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 14px 8px 8px;
+  border:1px solid var(--line2);
+  border-radius:999px;
+  background:rgba(255,255,255,.04);
+  font-size:13px;
+  font-weight:700;
+}
+
+.introParticipantCard .introAvatar{
+  width:28px;
+  height:28px;
+  border-radius:50%;
+  object-fit:cover;
+}
+
+.introEmpty{
+  color:var(--muted);
+  font-size:13px;
+}
+
+.introRulesList{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin:0;
+  padding:14px 16px;
+  border:1px solid var(--line2);
+  border-radius:16px;
+  background:rgba(255,255,255,.03);
+  list-style:none;
+  font-size:13px;
+  line-height:1.5;
+}
+
+.introRulesList li strong{color:#fff}
 .questionTop #timer{
   min-width:74px;
   padding:9px 12px;
@@ -1289,6 +1350,32 @@ select option{background:#101c31;color:#fff}
   .winnerCard{padding:45px 18px}
   #winnerText{font-size:40px}
   #restWinners{font-size:16px}
+
+  .introBox{padding-bottom:16px}
+
+  .introSection{margin-top:14px}
+
+  .introParticipants{
+    gap:8px;
+    max-height:160px;
+    overflow-y:auto;
+  }
+
+  .introParticipantCard{
+    padding:6px 12px 6px 6px;
+    font-size:12px;
+  }
+
+  .introParticipantCard .introAvatar{
+    width:24px;
+    height:24px;
+  }
+
+  .introRulesList{
+    padding:12px 13px;
+    font-size:12.5px;
+    line-height:1.45;
+  }
 }
 
 @media(max-width:390px){
@@ -2655,65 +2742,792 @@ select option{background:#101c31;color:#fff}
 }
 
 
-/* TO'RTBURCHAK RASM */
-.turnParticipantImage {
-  width: 58px;
-  height: 58px;
+/* =========================================================
+   TURN INDICATOR — BARCHA ISHTIROKCHILAR GORIZONTAL QATORI
+========================================================= */
 
-  flex: 0 0 58px;
+.currentTurnIndicator{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
 
-  overflow: hidden;
-  border-radius: 6px;
+  width:100%;
+  margin-top:14px;
+}
+
+.currentTurnIndicator .turnLabel{
+  padding-left:2px;
+  font-size:11px !important;
+  font-weight:950 !important;
+  letter-spacing:1.4px !important;
+  color:#67e8f9 !important;
+  text-shadow:none !important;
+}
+
+.turnEmpty{
+  color:var(--muted);
+  font-size:13px;
+}
+
+.turnParticipantsRow{
+  display:flex;
+  gap:10px;
+
+  overflow-x:auto;
+  overflow-y:hidden;
+
+  padding:2px 2px 8px;
+
+  scroll-snap-type:x proximity;
+}
+
+.turnParticipantsRow::-webkit-scrollbar{
+  height:6px;
+}
+
+.turnParticipantsRow::-webkit-scrollbar-track{
+  background:transparent;
+}
+
+.turnParticipantsRow::-webkit-scrollbar-thumb{
+  background:rgba(32,217,255,.30);
+  border-radius:10px;
+}
+
+.turnParticipantCard{
+  position:relative;
+  flex:0 0 auto;
+  scroll-snap-align:start;
+
+  display:flex;
+  align-items:center;
+  gap:9px;
+
+  min-width:150px;
+  padding:8px 14px 8px 8px;
+
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:12px;
+
+  background:rgba(255,255,255,.045);
+
+  opacity:.6;
+  transform:scale(.95);
+
+  transition:
+    opacity .18s ease,
+    transform .18s ease,
+    border-color .18s ease,
+    background .18s ease,
+    box-shadow .18s ease;
+}
+
+.turnParticipantCard.isCurrentTurn{
+  opacity:1;
+  transform:scale(1);
+
+  min-width:190px;
+  padding:9px 18px 9px 9px;
+
+  border-color:rgba(32,217,255,.55);
+
+  background:linear-gradient(
+    145deg,
+    rgba(32,217,255,.20),
+    rgba(255,255,255,.05)
+  );
+
+  box-shadow:0 8px 22px rgba(32,217,255,.20);
+}
+
+.turnParticipantCard .turnParticipantImage{
+  width:40px;
+  height:40px;
+  flex:0 0 40px;
+
+  overflow:hidden;
+  border-radius:8px;
+
+  transition:width .18s ease, height .18s ease, flex-basis .18s ease;
+}
+
+.turnParticipantCard.isCurrentTurn .turnParticipantImage{
+  width:54px;
+  height:54px;
+  flex:0 0 54px;
+}
+
+.turnParticipantCard .turnParticipantImage img{
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:cover;
+}
+
+.turnParticipantCard .turnParticipantData{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  min-width:0;
+}
+
+.turnParticipantCard .turnParticipantName{
+  font-size:12.5px;
+  font-weight:800;
+  line-height:1.2;
+  color:#c9dcee;
+
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:110px;
+}
+
+.turnParticipantCard.isCurrentTurn .turnParticipantName{
+  font-size:15px;
+  font-weight:950;
+  color:#fff;
+  max-width:140px;
+}
+
+.turnParticipantCard .turnParticipantPoints{
+  margin-top:3px;
+  font-size:11px;
+  font-weight:800;
+  color:#8fa3b9;
+}
+
+.turnParticipantCard.isCurrentTurn .turnParticipantPoints{
+  font-size:14px;
+  color:#20d9ff;
+}
+
+.turnBadge{
+  position:absolute;
+  top:-9px;
+  right:10px;
+
+  padding:2px 9px;
+  border-radius:999px;
+
+  background:#20d9ff;
+  color:#04222c;
+
+  font-size:8px;
+  font-weight:950;
+  letter-spacing:.6px;
+
+  box-shadow:0 3px 10px rgba(32,217,255,.4);
 }
 
 
-.turnParticipantImage img {
-  width: 100%;
-  height: 100%;
+/* TO'RTBURCHAK RASM (eski, endi ishlatilmaydi, mos ravishda tozalandi) */
 
-  display: block;
+/* =========================================================
+   TOPIC BOARD — QUESTION BOARD ICHIDAGI MAVZULAR
+========================================================= */
 
-  object-fit: cover;
+.topicBoard{
+  width:100%;
+  display:grid;
+  grid-template-columns:
+    repeat(
+      auto-fill,
+      minmax(190px, 1fr)
+    );
+  gap:12px;
+  margin-top:8px;
 
-  border-radius: 0;
+  /*
+   * 4 qatordan ortig'i
+   * vertikal scroll bilan
+   * ochiladi — sahifa pastga
+   * cho'zilib ketmaydi.
+   */
+  max-height:
+    calc(
+      (105px * 4) +
+      (12px * 3)
+    );
+
+  overflow-y:auto;
+  overflow-x:hidden;
+
+  padding-right:6px;
+  scroll-behavior:smooth;
+}
+
+.topicBoard::-webkit-scrollbar{
+  width:7px;
+}
+
+.topicBoard::-webkit-scrollbar-track{
+  background:transparent;
+}
+
+.topicBoard::-webkit-scrollbar-thumb{
+  background:rgba(32,217,255,.30);
+  border-radius:10px;
+}
+
+.topicBoard::-webkit-scrollbar-thumb:hover{
+  background:rgba(32,217,255,.5);
 }
 
 
-.turnParticipantData {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+.topicBoardCard{
+  position:relative;
 
-  min-width: 0;
+  min-height:105px;
+
+  padding:16px;
+
+  display:flex;
+  align-items:center;
+
+  gap:13px;
+
+  border:
+    1px solid
+    rgba(255,255,255,.10);
+
+  border-radius:16px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255,255,255,.08),
+      rgba(255,255,255,.025)
+    );
+
+  color:#fff;
+
+  cursor:pointer;
+
+  transition:
+    transform .18s ease,
+    background .18s ease,
+    border-color .18s ease,
+    box-shadow .18s ease;
 }
 
 
-.turnParticipantName {
-  font-size: 17px;
-  font-weight: 950;
-  line-height: 1.2;
+.topicBoardCard:hover{
+  transform:translateY(-3px);
 
-  color: #fff;
+  border-color:
+    rgba(32,217,255,.45);
+
+  box-shadow:
+    0 12px 28px
+    rgba(0,0,0,.22);
 }
 
 
-.turnParticipantPoints {
-  margin-top: 5px;
+/* ICON */
 
-  font-size: 18px;
-  font-weight: 950;
+.topicBoardIcon{
+  width:50px;
+  height:50px;
 
-  color: #20d9ff;
+  min-width:50px;
+
+  display:grid;
+  place-items:center;
+
+  border-radius:14px;
+
+  background:
+    rgba(32,217,255,.10);
+
+  font-size:25px;
 }
 
-.turnLabel {
-  font-size: 24px !important;
-  font-weight: 950 !important;
-  letter-spacing: 1px !important;
 
-  color: #20d9ff !important;
+/* INFO */
 
-  text-shadow:
-    0 0 8px rgba(32,217,255,.55),
-    0 0 18px rgba(32,217,255,.30) !important;
+.topicBoardInfo{
+  min-width:0;
+
+  display:flex;
+  flex-direction:column;
+
+  gap:5px;
+}
+
+
+.topicBoardInfo strong{
+  color:#f8fbff;
+
+  font-size:17px;
+  font-weight:900;
+
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+
+.topicBoardInfo span{
+  color:var(--muted);
+
+  font-size:12px;
+}
+
+
+.topicBoardInfo small{
+  color:#20d9ff;
+
+  font-size:11px;
+  font-weight:900;
+
+  letter-spacing:.5px;
+}
+
+
+/* =========================================================
+   TANLANGAN MAVZU — KO‘K
+========================================================= */
+
+.topicBoardCard.selected{
+
+  border-color:
+    #20d9ff;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(32,217,255,.28),
+      rgba(32,100,255,.14)
+    );
+
+  box-shadow:
+    0 0 0 2px
+    rgba(32,217,255,.18),
+
+    0 12px 30px
+    rgba(32,217,255,.16);
+
+  transform:
+    translateY(-2px);
+}
+
+
+.topicBoardCard.selected
+.topicBoardIcon{
+
+  background:
+    rgba(32,217,255,.25);
+
+  box-shadow:
+    0 0 18px
+    rgba(32,217,255,.20);
+}
+
+
+/* EMPTY */
+
+.topicBoardEmpty{
+
+  min-height:120px;
+
+  display:grid;
+  place-items:center;
+
+  color:var(--muted);
+
+  border:
+    1px dashed
+    rgba(255,255,255,.12);
+
+  border-radius:16px;
+
+  font-size:14px;
+}
+
+
+/* PHONE */
+
+@media(max-width:600px){
+
+  .topicBoard{
+    grid-template-columns:1fr;
+
+    max-height:
+      calc(
+        (88px * 4) +
+        (12px * 3)
+      );
+  }
+
+  .topicBoardCard{
+    min-height:88px;
+  }
+
+}
+
+.topicBoardCard{
+  position:relative;
+  overflow:hidden;
+}
+
+.topicStartOverlay{
+  position:absolute;
+  inset:0;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+
+  background:
+    rgba(20,110,255,.88);
+
+  color:#fff;
+
+  opacity:0;
+
+  pointer-events:none;
+
+  transition:
+    opacity .18s ease;
+}
+
+.topicBoardCard:hover
+.topicStartOverlay{
+  opacity:1;
+}
+
+.topicStartOverlay span{
+  font-size:20px;
+}
+
+.topicStartOverlay strong{
+  font-size:14px;
+  font-weight:950;
+  letter-spacing:.4px;
+}
+
+.topicBoardCard.selected{
+  border-color:#20d9ff;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(32,217,255,.28),
+      rgba(32,100,255,.14)
+    );
+
+  box-shadow:
+    0 0 0 2px
+    rgba(32,217,255,.18),
+
+    0 12px 30px
+    rgba(32,217,255,.16);
+}
+
+/* ==========================================================
+   PROFESSIONAL MOBILE OPTIMIZATION — FINAL LAYER
+   Barcha ekranlarda zamonaviy, ixcham va qulay tajriba.
+   Bu bo'lim eng oxirida turgani uchun kerak joyda
+   avvalgi qoidalarni ustidan bosib o'tadi.
+========================================================== */
+
+@media(max-width:640px){
+
+  /* ---------- UMUMIY RITM ---------- */
+
+  .app{
+    gap:16px;
+    padding-bottom:24px;
+  }
+
+  .gameBoardCard,
+  .teamsSection,
+  .panel,
+  .gameHero{
+    border-radius:18px !important;
+  }
+
+  /* ---------- HEADER ---------- */
+
+  .appHeader{
+    padding:10px 14px !important;
+    border-radius:16px !important;
+    gap:10px;
+  }
+
+  .brandMark{
+    width:38px !important;
+    height:38px !important;
+    border-radius:11px;
+  }
+
+  .brand-main{
+    font-size:17px !important;
+    letter-spacing:-.2px;
+  }
+
+  .headerActions{
+    gap:6px !important;
+  }
+
+  .topBtn{
+    min-height:38px !important;
+    padding:0 10px !important;
+    font-size:11px !important;
+    border-radius:10px;
+  }
+
+  /* ---------- HERO ---------- */
+
+  .gameHero{
+    padding:18px !important;
+    min-height:auto !important;
+    gap:10px;
+  }
+
+  .heroInfo h1{
+    font-size:22px !important;
+    line-height:1.25;
+  }
+
+  .heroInfo p{
+    font-size:12.5px;
+  }
+
+  .heroStatus{
+    font-size:11px;
+    padding:6px 10px;
+  }
+
+  /* ---------- SECTION HEADS ---------- */
+
+  .sectionHead,
+  .panelHead{
+    gap:8px;
+  }
+
+  .sectionHead h2,
+  .panelHead h2,
+  .panelHead h3{
+    font-size:17px !important;
+  }
+
+  .eyebrow{
+    font-size:10px !important;
+    letter-spacing:.08em;
+  }
+
+  /* ---------- BOARD + LEADERBOARD STACK ---------- */
+
+  .gameStage{
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+
+  .topicBoardCard{
+    padding:13px !important;
+    border-radius:14px !important;
+    gap:11px;
+  }
+
+  .topicBoardIcon{
+    width:42px !important;
+    height:42px !important;
+    min-width:42px !important;
+    font-size:20px !important;
+    border-radius:11px;
+  }
+
+  .topicBoardInfo strong{
+    font-size:14.5px !important;
+  }
+
+  .topicStartOverlay{
+    opacity:1 !important;
+    inset:auto 0 0 0 !important;
+    height:26px !important;
+    align-items:center !important;
+    background:linear-gradient(0deg,rgba(20,110,255,.92),transparent) !important;
+  }
+
+  .topicStartOverlay span{font-size:13px !important}
+  .topicStartOverlay strong{font-size:10px !important}
+
+  /* ---------- TOOLBOX / CONTROLS ---------- */
+
+  .controlDock{
+    gap:10px !important;
+  }
+
+  .toolBox{
+    padding:13px !important;
+    border-radius:14px !important;
+  }
+
+  .toolTitle{
+    font-size:10.5px !important;
+  }
+
+  .inlineForm{
+    gap:8px !important;
+  }
+
+  .toolRow{
+    gap:8px !important;
+  }
+
+  .toolRow select.excelTargetSelect{
+    min-height:44px;
+  }
+
+  /* ---------- LIVE PARTICIPANTS ---------- */
+
+  .liveParticipantsPanel .participantsBox{
+    max-height:280px !important;
+  }
+
+  /* ---------- TEAMS ---------- */
+
+  .teams{
+    gap:8px !important;
+  }
+
+  /* ---------- TOPIC LIBRARY ---------- */
+
+  .topicTools{
+    gap:10px !important;
+  }
+
+  .topicBlockHead h3{
+    font-size:15px !important;
+  }
+
+  .topicBlockHead span{
+    font-size:11px;
+  }
+
+  #userTopicPanel,
+  #otherTopicPanel{
+    gap:8px !important;
+  }
+
+  /* ---------- HISTORY ---------- */
+
+  .historyBox{
+    padding:15px !important;
+  }
+
+  /* ---------- MODALS (umumiy) ---------- */
+
+  .modal{
+    padding:8px !important;
+    align-items:flex-end !important;
+  }
+
+  .modal-box{
+    width:100% !important;
+    max-height:92vh !important;
+    padding:16px 14px !important;
+    border-radius:20px 20px 14px 14px !important;
+  }
+
+  .modalHeader h2{
+    font-size:17px !important;
+  }
+
+  .iconBtn{
+    width:32px !important;
+    height:32px !important;
+    font-size:18px !important;
+  }
+
+  /* ---------- QUESTION MODAL ---------- */
+
+  #qText{
+    font-size:22px !important;
+    margin:16px 0 14px !important;
+    line-height:1.35;
+  }
+
+  .questionTop #timer{
+    min-width:56px !important;
+    padding:6px 10px !important;
+    font-size:16px !important;
+  }
+
+  .turnParticipantCard{
+    min-width:130px;
+    padding:6px 11px 6px 6px;
+  }
+
+  .turnParticipantCard.isCurrentTurn{
+    min-width:160px;
+    padding:7px 14px 7px 7px;
+  }
+
+  .turnParticipantCard .turnParticipantImage{
+    width:32px;
+    height:32px;
+    flex-basis:32px;
+  }
+
+  .turnParticipantCard.isCurrentTurn .turnParticipantImage{
+    width:42px;
+    height:42px;
+    flex-basis:42px;
+  }
+
+  .turnParticipantCard .turnParticipantName{
+    font-size:11.5px;
+    max-width:90px;
+  }
+
+  .turnParticipantCard.isCurrentTurn .turnParticipantName{
+    font-size:13px;
+    max-width:110px;
+  }
+
+  /* ---------- INTRO / BRIEFING MODAL ---------- */
+
+  .introBox{
+    width:100% !important;
+  }
+
+  /* ---------- WINNER ---------- */
+
+  .winnerCard{
+    padding:32px 16px !important;
+    border-radius:20px !important;
+  }
+
+  #winnerText{
+    font-size:32px !important;
+  }
+}
+
+@media(max-width:380px){
+
+  .brand-main{font-size:15px !important}
+
+  .heroInfo h1{font-size:19px !important}
+
+  .topicBoard{
+    max-height:
+      calc(
+        (82px * 4) +
+        (10px * 3)
+      ) !important;
+  }
+
+  .topicBoardCard{
+    min-height:82px !important;
+  }
+
+  #qText{font-size:19px !important}
+
+  .turnParticipantCard{min-width:112px}
+  .turnParticipantCard.isCurrentTurn{min-width:140px}
 }
