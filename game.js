@@ -36,6 +36,17 @@ let winnerTimer = null;
 let currentTopicQuestionIndex = 0;
 let currentTopicQuestions = [];
 
+/*
+ * Ishtirokchisiz ("solo") o'yin
+ * statistikasi — jamoa bo'lmasa
+ * ham to'g'ri/xato javoblar
+ * shu yerda sanaladi.
+ */
+let soloStats = {
+  correct: 0,
+  wrong: 0
+};
+
 const $ = id => document.getElementById(id);
 const clickSound = $("clickSound");
 const winnerSound = $("winnerSound");
@@ -901,7 +912,9 @@ function addTeamWithParticipant(
     participantId: participant.id,
     name: participant.name,
     image: participant.image || "",
-    score: 0
+    score: 0,
+    correctCount: 0,
+    wrongCount: 0
   });
 
   renderTeams();
@@ -1038,6 +1051,7 @@ function updateTeamScoreUI(team) {
 
   renderTeams();
   renderParticipants();
+  updateTurnIndicator();
 }
 
 /* ================= TOPICS ================= */
@@ -1143,85 +1157,15 @@ async function loadTopicsSafe() {
 }
 
 function renderUserTopics() {
-  const container =
-    $("userTopicPanel");
-
-  if (!container) return;
-
-  container.innerHTML = "";
-
-  userTopics.forEach(
-    topic => {
-      const div =
-        document.createElement("div");
-
-      div.className =
-        "topicCard";
-
-      const total =
-        Object.values(
-          topic.questions || {}
-        ).reduce(
-          (s, c) =>
-            s +
-            (Array.isArray(c)
-              ? c.length
-              : 0),
-          0
-        );
-
-      div.innerHTML = `
-        <strong>
-          ${escapeHtml(
-            topic.title
-          )}
-        </strong>
-
-        <span>
-          ${total} ta savol
-        </span>
-
-        <small>
-          👤 ${escapeHtml(
-            topic.ownerName
-          )}
-        </small>
-      `;
-
-      div.onclick =
-        () =>
-          selectUserTopic(
-            topic.id
-          );
-
-      const editBtn = div.querySelector(".editBtn");
-      if (editBtn) {
-        editBtn.onclick = e => {
-          e.stopPropagation();
-          editUserTopicTitle(topic.id);
-        };
-      }
-
-      const deleteBtn = div.querySelector(".deleteBtn");
-      if (deleteBtn) {
-        deleteBtn.onclick = e => {
-          e.stopPropagation();
-          deleteUserTopic(topic.id);
-        };
-      }
-
-      container.appendChild(
-        div
-      );
-    }
-  );
 
   /*
-   * "Mening mavzularim" ro'yxati
-   * o'zgarsa, savollar maydoni (board)
-   * va Excel maqsad tanlovi ham
-   * shu zahoti yangilansin.
+   * "Mening mavzularim" paneli olib
+   * tashlandi — endi mavzular faqat
+   * savollar maydonida (board) va
+   * Excel maqsad tanlovida ko'rinadi,
+   * shu ikkalasi shu yerda sinxronlanadi.
    */
+
   renderBoard();
   renderExcelTargetOptions();
 }
@@ -1693,6 +1637,11 @@ function renderBoard() {
 
       </div>
 
+      <div class="topicBoardCardActions">
+        <button type="button" class="cardIconBtn editBtn" title="Tahrirlash">✏️</button>
+        <button type="button" class="cardIconBtn deleteBtn" title="O‘chirish">🗑️</button>
+      </div>
+
       <div class="topicStartOverlay">
         <span>▶</span>
         <strong>O‘YINNI BOSHLASH</strong>
@@ -1707,6 +1656,26 @@ function renderBoard() {
 
     };
 
+    const editBtn =
+      card.querySelector(".editBtn");
+
+    if (editBtn) {
+      editBtn.onclick = e => {
+        e.stopPropagation();
+        editUserTopicTitle(topic.id);
+      };
+    }
+
+    const deleteBtn =
+      card.querySelector(".deleteBtn");
+
+    if (deleteBtn) {
+      deleteBtn.onclick = e => {
+        e.stopPropagation();
+        deleteUserTopic(topic.id);
+      };
+    }
+
     board.appendChild(card);
 
   });
@@ -1717,18 +1686,6 @@ function renderBoard() {
 function openTopicIntro(topic) {
 
   if (!topic) return;
-
-  if (
-    !Array.isArray(teamsData) ||
-    !teamsData.length
-  ) {
-
-    alert(
-      "Avval ishtirokchini o‘yinga qo‘shing!"
-    );
-
-    return;
-  }
 
   if (gameFinalized) return;
 
@@ -1818,22 +1775,42 @@ function renderIntroRules() {
   const step =
     Number(pointStep) || 100;
 
-  box.innerHTML = `
-    <ul class="introRulesList">
-      <li>
-        ✅ To‘g‘ri javob — <strong>+${step} ball</strong>
-      </li>
-      <li>
-        ❌ Noto‘g‘ri javob yoki vaqt tugashi — <strong>−${step} ball</strong>
-      </li>
-      <li>
-        🔥 Savol oldida "2x", "3x" kabi belgi bo‘lsa, o‘sha savol uchun ball shuncha marta ko‘payadi
-      </li>
-      <li>
-        ⏱ Har bir savolga javob berish uchun belgilangan vaqt beriladi, vaqt tugasa ball ayiriladi
-      </li>
-    </ul>
-  `;
+  const isSolo =
+    !teamsData.length;
+
+  box.innerHTML = isSolo
+    ? `
+      <ul class="introRulesList">
+        <li>
+          🧠 Ishtirokchi tanlanmagan — <strong>yakka (solo) rejimda</strong> mashq qilasiz
+        </li>
+        <li>
+          🔀 Barcha savollar tasodifiy tartibda beriladi
+        </li>
+        <li>
+          📊 O‘yin oxirida nechta to‘g‘ri va nechta xato javob berganingiz statistikasi ko‘rsatiladi
+        </li>
+        <li>
+          ⏱ Har bir savolga javob berish uchun belgilangan vaqt beriladi
+        </li>
+      </ul>
+    `
+    : `
+      <ul class="introRulesList">
+        <li>
+          ✅ To‘g‘ri javob — <strong>+${step} ball</strong>
+        </li>
+        <li>
+          ❌ Noto‘g‘ri javob yoki vaqt tugashi — <strong>−${step} ball</strong>
+        </li>
+        <li>
+          🔥 Savol oldida "2x", "3x" kabi belgi bo‘lsa, o‘sha savol uchun ball shuncha marta ko‘payadi
+        </li>
+        <li>
+          ⏱ Har bir savolga javob berish uchun belgilangan vaqt beriladi, vaqt tugasa ball ayiriladi
+        </li>
+      </ul>
+    `;
 }
 
 function closeTopicIntroModal() {
@@ -1880,16 +1857,6 @@ function startTopicGame(topic) {
 
   if (!topic) return;
 
-  if (!Array.isArray(teamsData) ||
-      !teamsData.length) {
-
-    alert(
-      "Avval ishtirokchini o‘yinga qo‘shing!"
-    );
-
-    return;
-  }
-
   if (gameFinalized) return;
 
   currentUserTopicId =
@@ -1932,6 +1899,24 @@ function startTopicGame(topic) {
 
     return;
   }
+
+  /*
+   * Har o'yinda savollar
+   * tasodifiy tartibda beriladi.
+   */
+  currentTopicQuestions =
+    shuffleArray(
+      currentTopicQuestions
+    );
+
+  /*
+   * Solo statistikasini
+   * yangi o'yin uchun tozalaymiz.
+   */
+  soloStats = {
+    correct: 0,
+    wrong: 0
+  };
 
   /*
    * Hozirgi savoldan boshlaymiz
@@ -2215,7 +2200,7 @@ function buildAnswerOptions(
 function ensureAnswerOptionsUI() {
   const modalBox =
     document.querySelector(
-      "#modal .modal-box"
+      "#modal .questionBox"
     );
 
   if (!modalBox) return null;
@@ -2251,55 +2236,6 @@ function ensureAnswerOptionsUI() {
   }
 
   return container;
-}
-
-function ensureTurnIndicatorUI() {
-  const modalBox =
-    document.querySelector(
-      "#modal .modal-box"
-    );
-
-  if (!modalBox) return null;
-
-  let el =
-    $("currentTurnIndicator");
-
-  if (!el) {
-    el =
-      document.createElement(
-        "div"
-      );
-
-    el.id =
-      "currentTurnIndicator";
-
-    el.className =
-      "currentTurnIndicator";
-
-    /*
-     * Indikator .questionTop
-     * ICHIGA emas, undan KEYIN
-     * to'liq kenglikdagi qator
-     * sifatida joylashadi —
-     * shunda gorizontal ro'yxat
-     * uchun joy yetarli bo'ladi.
-     */
-    const top =
-      modalBox.querySelector(
-        ".questionTop"
-      );
-
-    if (top && top.parentNode) {
-      top.parentNode.insertBefore(
-        el,
-        top.nextSibling
-      );
-    } else {
-      modalBox.prepend(el);
-    }
-  }
-
-  return el;
 }
 
 function renderAnswerOptions(
@@ -2360,55 +2296,74 @@ function renderAnswerOptions(
 }
 
 function updateTurnIndicator() {
+
   const el =
-    ensureTurnIndicatorUI();
+    $("questionParticipants");
+
+  const sideBox =
+    $("participantsSideBox");
+
+  const wrap =
+    document.querySelector(
+      ".questionModalWrap"
+    );
 
   if (!el) return;
 
   if (!teamsData.length) {
 
-    el.innerHTML = `
-      <span class="turnLabel">
-        NAVBAT
-      </span>
-      <span class="turnEmpty">
-        👤 Ishtirokchi yo‘q
-      </span>
-    `;
+    /*
+     * Ishtirokchi tanlanmagan
+     * bo'lsa (solo rejim),
+     * o'ng panelni umuman
+     * ko'rsatmaymiz — savol
+     * qutisi butun kenglikni
+     * egallaydi.
+     */
+    if (sideBox) {
+      sideBox.style.display =
+        "none";
+    }
+
+    wrap?.classList.add(
+      "soloMode"
+    );
+
+    el.innerHTML = "";
 
     return;
   }
 
-  /*
-   * Navbatdagidan boshlab,
-   * qolgan hammasini aylanma
-   * tartibda joylashtiramiz —
-   * shunda "keyingi navbat kim"
-   * ekani ham darrov ko'rinadi.
-   */
-  const ordered = [];
-
-  for (
-    let i = 0;
-    i < teamsData.length;
-    i++
-  ) {
-
-    const idx =
-      (currentTurnIndex + i) %
-      teamsData.length;
-
-    ordered.push(
-      teamsData[idx]
-    );
-
+  if (sideBox) {
+    sideBox.style.display =
+      "";
   }
 
-  const cardsHtml = ordered
-    .map((team, i) => {
+  wrap?.classList.remove(
+    "soloMode"
+  );
+
+  /*
+   * Ball bo'yicha (eng yuqoridan)
+   * saralanadi — jonli reyting
+   * ko'rinishida. Navbatdagi
+   * ishtirokchi alohida belgi
+   * bilan ajratiladi.
+   */
+  const sorted =
+    [...teamsData].sort(
+      (a, b) =>
+        (b.score || 0) -
+        (a.score || 0)
+    );
+
+  const cardsHtml = sorted
+    .map(team => {
 
       const isCurrent =
-        i === 0;
+        teamsData[
+          currentTurnIndex
+        ] === team;
 
       const p =
         findParticipant(
@@ -2416,19 +2371,13 @@ function updateTurnIndicator() {
         );
 
       return `
-        <div class="turnParticipantCard${
+        <div class="qParticipantCard${
           isCurrent
             ? " isCurrentTurn"
             : ""
         }">
 
-          ${
-            isCurrent
-              ? `<span class="turnBadge">NAVBAT</span>`
-              : ""
-          }
-
-          <div class="turnParticipantImage">
+          <div class="qParticipantAvatar">
             <img
               src="${
                 p?.image ||
@@ -2439,17 +2388,23 @@ function updateTurnIndicator() {
             >
           </div>
 
-          <div class="turnParticipantData">
+          <div class="qParticipantInfo">
 
-            <strong class="turnParticipantName">
+            <strong class="qParticipantName">
               ${escapeHtml(team.name)}
             </strong>
 
-            <span class="turnParticipantPoints">
+            <span class="qParticipantScore">
               ${Number(team.score || 0)} ball
             </span>
 
           </div>
+
+          ${
+            isCurrent
+              ? `<span class="turnBadge">NAVBAT</span>`
+              : ""
+          }
 
         </div>
       `;
@@ -2457,15 +2412,8 @@ function updateTurnIndicator() {
     })
     .join("");
 
-  el.innerHTML = `
-    <span class="turnLabel">
-      NAVBATLAR
-    </span>
-
-    <div class="turnParticipantsRow">
-      ${cardsHtml}
-    </div>
-  `;
+  el.innerHTML =
+    cardsHtml;
 }
 
 function getNextUnusedCell() {
@@ -2523,15 +2471,6 @@ function openQ(
 ) {
 
   if (!item) {
-    return;
-  }
-
-  if (!teamsData.length) {
-
-    alert(
-      "Avval ishtirokchi qo‘shing!"
-    );
-
     return;
   }
 
@@ -2708,20 +2647,22 @@ function handleAnswerSelection(
   correctAnswer
 ) {
   if (
-    !currentQuestionActive ||
-    !teamsData[
-      currentTurnIndex
-    ]
+    !currentQuestionActive
   ) {
     return;
   }
 
   clearInterval(timer);
 
+  /*
+   * Ishtirokchi tanlanmagan
+   * bo'lsa ham (solo rejim)
+   * javob ishlashi kerak.
+   */
   const team =
     teamsData[
       currentTurnIndex
-    ];
+    ] || null;
 
   const selected =
     String(
@@ -2775,12 +2716,32 @@ function handleAnswerSelection(
         currentQuestionMultiplier
       : -currentValue;
 
-  team.score +=
-    points;
+  if (team) {
 
-  updateTeamScoreUI(
-    team
-  );
+    team.score +=
+      points;
+
+    if (isCorrect) {
+      team.correctCount =
+        (team.correctCount || 0) + 1;
+    } else {
+      team.wrongCount =
+        (team.wrongCount || 0) + 1;
+    }
+
+    updateTeamScoreUI(
+      team
+    );
+
+  } else {
+
+    if (isCorrect) {
+      soloStats.correct++;
+    } else {
+      soloStats.wrong++;
+    }
+
+  }
 
   showAnswerResult(
     isCorrect,
@@ -2791,16 +2752,13 @@ function handleAnswerSelection(
   setTimeout(
     () =>
       finishCurrentQuestionAndAdvance(),
-    850
+    2600
   );
 }
 
 function handleTimeExpired() {
     if (
-    !currentQuestionActive ||
-    !teamsData[
-      currentTurnIndex
-    ]
+    !currentQuestionActive
   ) {
     return;
   }
@@ -2808,7 +2766,7 @@ function handleTimeExpired() {
   const team =
     teamsData[
       currentTurnIndex
-    ];
+    ] || null;
 
   const correct =
     String(
@@ -2838,12 +2796,23 @@ function handleTimeExpired() {
       }
     });
 
-  team.score -=
-    currentValue;
+  if (team) {
 
-  updateTeamScoreUI(
-    team
-  );
+    team.score -=
+      currentValue;
+
+    team.wrongCount =
+      (team.wrongCount || 0) + 1;
+
+    updateTeamScoreUI(
+      team
+    );
+
+  } else {
+
+    soloStats.wrong++;
+
+  }
 
   const a =
     $("aText");
@@ -2860,7 +2829,7 @@ function handleTimeExpired() {
   setTimeout(
     () =>
       finishCurrentQuestionAndAdvance(),
-    850
+    2600
   );
 }
 
@@ -2875,15 +2844,21 @@ function showAnswerResult(
   if (!a) return;
 
   a.textContent =
-    `${
-      isCorrect
-        ? "✅ To‘g‘ri!"
-        : "❌ Xato!"
-    } ${
-      points > 0
-        ? "+"
-        : ""
-    }${points} ball — ${team.name}`;
+    team
+      ? `${
+          isCorrect
+            ? "✅ To‘g‘ri!"
+            : "❌ Xato!"
+        } ${
+          points > 0
+            ? "+"
+            : ""
+        }${points} ball — ${team.name}`
+      : `${
+          isCorrect
+            ? "✅ To‘g‘ri!"
+            : "❌ Xato!"
+        }`;
 
   a.classList.remove(
     "hidden"
@@ -3143,7 +3118,11 @@ async function saveGameResult(
           name: t.name,
           score: t.score,
           image:
-            t.image || ""
+            t.image || "",
+          correctCount:
+            t.correctCount || 0,
+          wrongCount:
+            t.wrongCount || 0
         })
       ),
 
@@ -3306,10 +3285,7 @@ window.recalculateStatsFromHistory =
   recalculateStatsFromHistory;
 
 async function declareWinner() {
-  if (
-    gameFinalized ||
-    !teamsData.length
-  ) {
+  if (gameFinalized) {
     return;
   }
 
@@ -3320,6 +3296,16 @@ async function declareWinner() {
     false;
 
   clearInterval(timer);
+
+  /*
+   * ISHTIROKCHISIZ (SOLO) YAKUN
+   */
+  if (!teamsData.length) {
+
+    showSoloResultModal();
+
+    return;
+  }
 
   const sorted =
     [...teamsData].sort(
@@ -3347,6 +3333,73 @@ async function declareWinner() {
       e
     );
   }
+}
+
+function showSoloResultModal() {
+
+  const modal =
+    $("winnerModal");
+
+  const text =
+    $("winnerText");
+
+  const rest =
+    $("restWinners");
+
+  if (!modal) return;
+
+  const total =
+    soloStats.correct +
+    soloStats.wrong;
+
+  const percent =
+    total
+      ? Math.round(
+          (soloStats.correct /
+            total) *
+            100
+        )
+      : 0;
+
+  text.innerHTML = `
+    <div class="winnerHero soloHero">
+      <div class="winnerCrown">
+        🎯 O‘YIN YAKUNLANDI
+      </div>
+
+      <div>
+        Yakka (solo) natija
+      </div>
+
+      <small>
+        ✅ ${soloStats.correct} to‘g‘ri &nbsp; ❌ ${soloStats.wrong} xato &nbsp; (${percent}%)
+      </small>
+    </div>
+  `;
+
+  rest.innerHTML = "";
+
+  modal.style.display =
+    "flex";
+
+  playWinSound();
+  launchConfetti();
+
+  clearTimeout(
+    winnerTimer
+  );
+
+  winnerTimer =
+    setTimeout(
+      () => {
+        modal.style.display =
+          "none";
+
+        stopConfetti();
+        resetBoardOnly();
+      },
+      12000
+    );
 }
 
 function renderGameHistory() {
@@ -3406,6 +3459,11 @@ function renderGameHistory() {
                     ${escapeHtml(
                       t.name
                     )}: ${t.score}
+                    ${
+                      (t.correctCount != null || t.wrongCount != null)
+                        ? `<span class="teamScoreStats">✅${t.correctCount || 0} ❌${t.wrongCount || 0}</span>`
+                        : ""
+                    }
                   </div>`
               )
               .join("")
@@ -3573,6 +3631,10 @@ function showWinnerModal(
         <small>
           ${winner.score} ball
         </small>
+
+        <div class="winnerStats">
+          ✅ ${winner.correctCount || 0} to‘g‘ri &nbsp; ❌ ${winner.wrongCount || 0} xato
+        </div>
       </div>
     </div>
   `;
@@ -3613,6 +3675,10 @@ function showWinnerModal(
               <b>
                 ${t.score}
               </b>
+
+              <span class="winnerRowStats">
+                ✅${t.correctCount || 0} ❌${t.wrongCount || 0}
+              </span>
             </div>
           `;
         }
@@ -3785,8 +3851,15 @@ function resetBoardOnly() {
   teamsData.forEach(
     t => {
       t.score = 0;
+      t.correctCount = 0;
+      t.wrongCount = 0;
     }
   );
+
+  soloStats = {
+    correct: 0,
+    wrong: 0
+  };
 
   /*
    * Tanlangan mavzu bo‘yicha

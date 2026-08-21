@@ -121,46 +121,58 @@
 </div>
         <div id="bonusEffect" class="bonusEffect hidden">🔥 2X BONUS 🔥</div>
 
-        <section class="controlDock">
+        <section class="controlDock controlDockWide">
 
-          <div class="toolBox">
-
-        <div class="inlineForm">
-            <div class="field compactField">
-              <label for="pointStepInput">BALL</label>
-              <input type="number" id="pointStepInput" value="100" min="1">
+          <div class="toolBox topicToolBox">
+            <span class="toolTitle">Yangi mavzu</span>
+            <div class="toolRow">
+              <input type="text" id="newUserTopicTitle" placeholder="Mavzu nomi">
+              <button class="smallBtn" onclick="addUserTopic()">Qo‘shish</button>
             </div>
+            <button class="linkBtn" id="downloadTemplateBtn">📄 Shablon yuklab olish</button>
+          </div>
 
-            <div class="field compactField">
-              <label for="pointModeSelect">REJIM</label>
-              <select id="pointModeSelect">
-                <option value="fixed">Bir xil</option>
-                <option value="progressive">100-200-300</option>
-              </select>
+          <div class="toolBox excelToolBox">
+            <span class="toolTitle">Excel’dan yuklash</span>
+            <div class="toolRow">
+              <select id="userTopicExcelTarget" class="excelTargetSelect"></select>
             </div>
+            <div class="toolRow">
+              <input type="file" id="userTopicExcelInput">
+              <button class="smallBtn" onclick="importExcelForUserTopic()">Yuklash</button>
+            </div>
+          </div>
 
-            <button class="smallBtn" onclick="updatePointSettings()">Saqlash</button>
-          </div>
-          </div>
-        
-          <div class="toolBox">
-        <div class="controlContent">
-          <span class="eyebrow">RANDOMIZER</span>
-          <button class="bigBtn secondaryBtn wideBtn" onclick="shuffleQuestionsByButton()">
-            🔀 Savollarni aralashtirish
-          </button>
-        </div>
-        </div>
+          <div class="toolBox pointToolBox">
+            <span class="toolTitle">Ball</span>
+            <div class="inlineForm">
+              <div class="field compactField">
+                <label for="pointStepInput">BALL</label>
+                <input type="number" id="pointStepInput" value="100" min="1">
+              </div>
 
-        
-        <div class="toolBox timerTool">
-          <span class="toolTitle">⏱ Savol vaqti</span>
-          <div class="toolRow">
-            <input type="number" id="timerInput" min="1" max="300" value="10">
-            <span class="unit">sekund</span>
-            <button class="bigBtn secondaryBtn" onclick="updateTimer()">O‘zgartirish</button>
+              
+
+              <button class="smallBtn" onclick="updatePointSettings()">Saqlash</button>
+            </div>
           </div>
-        </div>
+
+          <div class="toolBox randomizerToolBox">
+            <span class="toolTitle">Randomizer</span>
+            <button class="smallBtn wideBtn" onclick="shuffleQuestionsByButton()">
+              🔀 Savollarni aralashtirish
+            </button>
+          </div>
+
+          <div class="toolBox timerTool">
+            <span class="toolTitle">⏱ Savol vaqti</span>
+            <div class="toolRow">
+              <input type="number" id="timerInput" min="1" max="300" value="10">
+              <span class="unit"></span>
+              <button class="smallBtn" onclick="updateTimer()">O‘zgartirish</button>
+            </div>
+          </div>
+
         </section>
       
       </section>
@@ -189,46 +201,7 @@
     ========================== -->
     <section class="panel topicLibrary">
 
-      <div class="panelHead topicMainHead">
-        <div>
-          <span class="eyebrow">QUESTION LIBRARY</span>
-          <h2>Mavzular</h2>
-          <p class="panelDescription">O‘zingiz yaratgan yoki boshqa foydalanuvchilar ulashgan mavzuni tanlang.</p>
-        </div>
-      </div>
-
-      <!-- CREATE / IMPORT TOOLS -->
-      <div class="topicTools">
-
-        <div class="toolBox">
-          <span class="toolTitle">Yangi mavzu</span>
-          <div class="toolRow">
-            <input type="text" id="newUserTopicTitle" placeholder="Yangi topic nomi">
-            <button class="bigBtn primaryBtn" onclick="addUserTopic()">Qo‘shish</button>
-            <button class="bigBtn secondaryBtn" id="downloadTemplateBtn">📄 Shablon</button>
-          </div>
-        </div>
-
-        <div class="toolBox">
-          <span class="toolTitle">Excel</span>
-          <div class="toolRow">
-            <select id="userTopicExcelTarget" class="excelTargetSelect"></select>
-            <input type="file" id="userTopicExcelInput">
-            <button class="bigBtn secondaryBtn" onclick="importExcelForUserTopic()">Excel’dan yuklash</button>
-          </div>
-        </div>
-
-
-      </div>
-
-      <!-- MY TOPICS -->
-      <div class="topicBlock">
-        <div class="topicBlockHead">
-          <h3>📚 Mening mavzularim</h3>
-          <span>O‘yin uchun tanlang</span>
-        </div>
-        <div id="userTopicPanel"></div>
-      </div>
+      
 
       <!-- OTHER TOPICS -->
       <div class="topicBlock">
@@ -289,24 +262,33 @@
        QUESTION MODAL
   ========================== -->
   <div class="modal" id="modal">
-    <div class="modal-box questionBox">
+    <div class="questionModalWrap">
 
-      <div class="questionTop">
-        <span class="eyebrow">QUESTION</span>
-        <div id="timer">10</div>
+      <div class="modal-box questionBox">
+
+        <div class="questionTop">
+          <span class="eyebrow">QUESTION</span>
+          <div id="timer">10</div>
+        </div>
+
+        <div class="questionBody">
+          <div id="qText"></div>
+          <p id="aText" class="hidden"></p>
+        </div>
+
+        <div class="questionActions">
+           <button class="bigBtn secondaryBtn" onclick="closeModal()">Yopish</button>
+          <button class="bigBtn secondaryBtn" onclick="handleTimeExpired()">⏭ Javob bermadim</button>
+        </div>
+
+        <audio id="tickSound" src="tick.mp3" preload="auto"></audio>
       </div>
 
-      <div class="questionBody">
-        <div id="qText"></div>
-        <p id="aText" class="hidden"></p>
-      </div>
+      <aside class="modal-box participantsSideBox" id="participantsSideBox">
+        <span class="questionSidebarTitle">ISHTIROKCHILAR</span>
+        <div id="questionParticipants" class="questionParticipants"></div>
+      </aside>
 
-      <div class="questionActions">
-         <button class="bigBtn secondaryBtn" onclick="closeModal()">Yopish</button>
-        <button class="bigBtn secondaryBtn" onclick="handleTimeExpired()">⏭ Javob bermadim</button>
-      </div>
-
-      <audio id="tickSound" src="tick.mp3" preload="auto"></audio>
     </div>
   </div>
 

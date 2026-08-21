@@ -1569,13 +1569,57 @@ select option{background:#101c31;color:#fff}
 .winnerCrown{color:var(--gold);font-size:12px;font-weight:950;letter-spacing:2px;margin-bottom:5px}
 .winnerHero small{display:block;color:#aebdd0;font-size:16px;margin-top:5px}
 .winnerRow{
-  display:grid;grid-template-columns:32px 34px minmax(0,1fr) auto;align-items:center;gap:9px;
+  display:grid;grid-template-columns:32px 34px minmax(0,1fr) auto auto;align-items:center;gap:9px;
   margin:7px 0;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.045);text-align:left;
 }
 .winnerRow img{width:34px;height:34px;border-radius:50%;object-fit:cover}
 .winnerRow span{color:#91a1b5;font-weight:900}
 .winnerRow strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .winnerRow b{color:#67e8f9}
+
+.winnerStats{
+  margin-top:6px;
+  color:#9db2c8;
+  font-size:13px;
+  font-weight:800;
+}
+
+.winnerRowStats{
+  color:#8fa3b9;
+  font-size:11px;
+  font-weight:800;
+  white-space:nowrap;
+}
+
+.teamScoreStats{
+  margin-left:8px;
+  color:#8fa3b9;
+  font-size:11px;
+  font-weight:800;
+}
+
+.soloHero{
+  flex-direction:column;
+  text-align:center;
+  gap:8px;
+}
+
+.soloHero .winnerCrown{
+  font-size:14px;
+  margin-bottom:0;
+}
+
+.soloHero > div:nth-child(2){
+  font-size:22px;
+  font-weight:900;
+  color:#f1f6fb;
+}
+
+.soloHero small{
+  font-size:18px;
+  font-weight:800;
+  color:#bbf7d0;
+}
 
 @media(max-width:1050px){
   .gameStage{grid-template-columns:minmax(0,1fr) 280px}
@@ -1829,11 +1873,11 @@ select option{background:#101c31;color:#fff}
 ========================= */
 
 .answerOption {
-  font-size: 18px;
+  font-size: 20px;
 }
 
 .answerLetter {
-  font-size: 15px;
+  font-size: 17px;
 }
 
 
@@ -1913,7 +1957,7 @@ select option{background:#101c31;color:#fff}
   }
 
   .answerOption {
-    font-size: 17px;
+    font-size: 18px;
   }
 
 }
@@ -1966,11 +2010,11 @@ select option{background:#101c31;color:#fff}
   }
 
   .answerOption {
-    font-size: 16px;
+    font-size: 17px;
   }
 
   #qText {
-    font-size: 32px;
+    font-size: 34px;
   }
 
   #aText {
@@ -2335,8 +2379,16 @@ select option{background:#101c31;color:#fff}
 
 /* ==========================================================
    CONTROL DOCK — FINAL OVERRIDE
-   Faqat controlDock ichidagi 3 ta toolBox uchun
+   controlDock ichidagi barcha toolBox'lar uchun
 ========================================================== */
+
+.controlDockWide{
+  grid-template-columns:
+    repeat(
+      auto-fit,
+      minmax(200px, 1fr)
+    ) !important;
+}
 
 .controlDock > .toolBox {
   min-width: 0 !important;
@@ -2368,10 +2420,96 @@ select option{background:#101c31;color:#fff}
 
 
 /* ==========================================
+   YANGI MAVZU
+========================================== */
+
+.controlDock > .topicToolBox .toolRow {
+  width: 100% !important;
+  display: flex !important;
+  gap: 8px !important;
+}
+
+.controlDock > .topicToolBox input[type="text"] {
+  height: 40px !important;
+  min-height: 40px !important;
+  padding: 8px 12px !important;
+  font-size: 12.5px !important;
+}
+
+.controlDock > .topicToolBox .smallBtn {
+  height: 40px !important;
+  min-height: 40px !important;
+  padding: 8px 12px !important;
+  font-size: 11.5px !important;
+  white-space: nowrap !important;
+}
+
+.linkBtn{
+  margin-top: 9px;
+  padding: 0;
+  border: none;
+  background: none;
+
+  color: #67e8f9;
+  font-size: 11px;
+  font-weight: 800;
+
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+
+  cursor: pointer;
+  min-height: auto;
+}
+
+.linkBtn:hover{
+  color: #20d9ff;
+}
+
+
+/* ==========================================
+   EXCEL'DAN YUKLASH
+========================================== */
+
+.controlDock > .excelToolBox .toolRow {
+  width: 100% !important;
+  display: flex !important;
+  gap: 8px !important;
+  margin-bottom: 7px !important;
+}
+
+.controlDock > .excelToolBox .toolRow:last-child{
+  margin-bottom: 0 !important;
+}
+
+.controlDock > .excelToolBox select.excelTargetSelect {
+  height: 40px !important;
+  min-height: 40px !important;
+  padding: 8px 12px !important;
+  font-size: 12px !important;
+}
+
+.controlDock > .excelToolBox input[type="file"] {
+  height: 40px !important;
+  min-height: 40px !important;
+  padding: 8px 10px !important;
+  font-size: 10.5px !important;
+}
+
+.controlDock > .excelToolBox .smallBtn {
+  height: 40px !important;
+  min-height: 40px !important;
+  padding: 8px 12px !important;
+  font-size: 11.5px !important;
+  white-space: nowrap !important;
+}
+
+
+/* ==========================================
    BALL SOZLAMASI
 ========================================== */
 
-.controlDock > .toolBox:first-child .inlineForm {
+.controlDock > .pointToolBox .inlineForm {
   width: 100% !important;
 
   display: flex !important;
@@ -2382,14 +2520,14 @@ select option{background:#101c31;color:#fff}
 }
 
 
-.controlDock > .toolBox:first-child .field {
+.controlDock > .pointToolBox .field {
   display: flex !important;
   flex-direction: column !important;
   gap: 5px !important;
 }
 
 
-.controlDock > .toolBox:first-child label {
+.controlDock > .pointToolBox label {
   color: var(--muted) !important;
 
   font-size: 10px !important;
@@ -2399,31 +2537,31 @@ select option{background:#101c31;color:#fff}
 }
 
 
-.controlDock > .toolBox:first-child input {
-  width: 82px !important;
+.controlDock > .pointToolBox input {
+  width: 74px !important;
   height: 44px !important;
   min-height: 44px !important;
 
-  padding: 9px 13px !important;
+  padding: 9px 11px !important;
 
   font-size: 13px !important;
   font-weight: 700 !important;
 }
 
 
-.controlDock > .toolBox:first-child select {
-  width: 140px !important;
+.controlDock > .pointToolBox select {
+  width: 120px !important;
   height: 44px !important;
   min-height: 44px !important;
 
-  padding: 9px 13px !important;
+  padding: 9px 11px !important;
 
-  font-size: 13px !important;
+  font-size: 12px !important;
   font-weight: 700 !important;
 }
 
 
-.controlDock > .toolBox:first-child .smallBtn {
+.controlDock > .pointToolBox .smallBtn {
   height: 44px !important;
   min-height: 44px !important;
 
@@ -2440,40 +2578,23 @@ select option{background:#101c31;color:#fff}
    RANDOMIZER
 ========================================== */
 
-.controlDock > .toolBox:nth-child(2) {
+.controlDock > .randomizerToolBox {
   justify-content: center !important;
 }
 
 
-.controlDock > .toolBox:nth-child(2) .controlContent {
-  width: 100% !important;
-}
-
-
-.controlDock > .toolBox:nth-child(2) .eyebrow {
-  display: block !important;
-
-  margin: 0 0 8px !important;
-
-  color: var(--muted) !important;
-
-  font-size: 10px !important;
-  font-weight: 800 !important;
-
-  line-height: 1.2 !important;
-}
-
-
-.controlDock > .toolBox:nth-child(2) .bigBtn {
+.controlDock > .randomizerToolBox .smallBtn {
   width: 100% !important;
 
   height: 44px !important;
   min-height: 44px !important;
 
-  padding: 10px 16px !important;
+  padding: 10px 14px !important;
 
-  font-size: 13px !important;
+  font-size: 12.5px !important;
   font-weight: 850 !important;
+  white-space: normal !important;
+  line-height: 1.3 !important;
 }
 
 
@@ -2511,7 +2632,7 @@ select option{background:#101c31;color:#fff}
 
 
 .controlDock > .toolBox.timerTool input {
-  width: 82px !important;
+  width: 74px !important;
 
   height: 44px !important;
   min-height: 44px !important;
@@ -2531,13 +2652,13 @@ select option{background:#101c31;color:#fff}
 }
 
 
-.controlDock > .toolBox.timerTool .bigBtn {
+.controlDock > .toolBox.timerTool .smallBtn {
   height: 44px !important;
   min-height: 44px !important;
 
-  padding: 10px 16px !important;
+  padding: 10px 14px !important;
 
-  font-size: 13px !important;
+  font-size: 12px !important;
   font-weight: 850 !important;
 
   white-space: nowrap !important;
@@ -2574,6 +2695,63 @@ select option{background:#101c31;color:#fff}
   box-shadow:
     0 12px 30px rgba(0,0,0,.22),
     0 0 20px rgba(32,217,255,.05) !important;
+}
+
+
+/* ==========================================
+   TOPIC BOARD CARD — TAHRIRLASH/O'CHIRISH
+========================================== */
+
+.topicBoardCard{
+  position: relative;
+}
+
+.topicBoardCardActions{
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 5;
+
+  display: flex;
+  gap: 5px;
+
+  opacity: 0;
+  transform: translateY(-3px);
+
+  transition: opacity .16s ease, transform .16s ease;
+}
+
+.topicBoardCard:hover .topicBoardCardActions,
+.topicBoardCard:focus-within .topicBoardCardActions{
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.cardIconBtn{
+  width: 26px;
+  height: 26px;
+  min-height: 26px;
+  padding: 0;
+
+  display: grid;
+  place-items: center;
+
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 9px;
+
+  background: rgba(11,23,41,.85);
+  backdrop-filter: blur(4px);
+
+  font-size: 12px;
+  line-height: 1;
+
+  cursor: pointer;
+  transition: transform .15s ease, border-color .15s ease;
+}
+
+.cardIconBtn:hover{
+  transform: scale(1.08);
+  border-color: rgba(32,217,255,.5);
 }
 
 
@@ -2719,49 +2897,72 @@ select option{background:#101c31;color:#fff}
   opacity: .95;
 }
 
-.turnParticipant {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-
-  margin-left: 10px;
-  padding: 8px 16px 8px 8px;
-
-  min-width: 190px;
-
-  border: 1px solid rgba(32,217,255,.30);
-  border-radius: 12px;
-
-  background: linear-gradient(
-    145deg,
-    rgba(32,217,255,.14),
-    rgba(255,255,255,.05)
-  );
-
-  box-shadow: 0 6px 20px rgba(0,0,0,.22);
-}
-
-
 /* =========================================================
-   TURN INDICATOR — BARCHA ISHTIROKCHILAR GORIZONTAL QATORI
+   QUESTION MODAL — SAVOL VA ISHTIROKCHILAR ALOHIDA QUTIDA
 ========================================================= */
 
-.currentTurnIndicator{
+.questionModalWrap{
   display:flex;
-  flex-direction:column;
-  gap:8px;
+  align-items:flex-start;
+  justify-content:center;
+  gap:20px;
 
   width:100%;
-  margin-top:14px;
+  max-width:1200px;
+  max-height:90vh;
 }
 
-.currentTurnIndicator .turnLabel{
+.questionBox{
+  flex:1 1 auto;
+  min-width:0;
+  width:min(880px,72vw);
+  padding:30px 32px;
+}
+
+.questionModalWrap.soloMode .questionBox{
+  width:min(980px,90vw);
+}
+
+.participantsSideBox{
+  flex:0 0 280px;
+  width:280px;
+
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+
+  padding:18px 16px;
+  max-height:90vh;
+}
+
+.questionSidebarTitle{
   padding-left:2px;
-  font-size:11px !important;
-  font-weight:950 !important;
-  letter-spacing:1.4px !important;
-  color:#67e8f9 !important;
-  text-shadow:none !important;
+  color:#67e8f9;
+  font-size:12px;
+  font-weight:950;
+  letter-spacing:1.4px;
+}
+
+.questionParticipants{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+
+  overflow-y:auto;
+  padding-right:4px;
+}
+
+.questionParticipants::-webkit-scrollbar{
+  width:6px;
+}
+
+.questionParticipants::-webkit-scrollbar-track{
+  background:transparent;
+}
+
+.questionParticipants::-webkit-scrollbar-thumb{
+  background:rgba(32,217,255,.30);
+  border-radius:10px;
 }
 
 .turnEmpty{
@@ -2769,66 +2970,27 @@ select option{background:#101c31;color:#fff}
   font-size:13px;
 }
 
-.turnParticipantsRow{
-  display:flex;
-  gap:10px;
-
-  overflow-x:auto;
-  overflow-y:hidden;
-
-  padding:2px 2px 8px;
-
-  scroll-snap-type:x proximity;
-}
-
-.turnParticipantsRow::-webkit-scrollbar{
-  height:6px;
-}
-
-.turnParticipantsRow::-webkit-scrollbar-track{
-  background:transparent;
-}
-
-.turnParticipantsRow::-webkit-scrollbar-thumb{
-  background:rgba(32,217,255,.30);
-  border-radius:10px;
-}
-
-.turnParticipantCard{
+.qParticipantCard{
   position:relative;
-  flex:0 0 auto;
-  scroll-snap-align:start;
 
   display:flex;
   align-items:center;
-  gap:9px;
+  gap:12px;
 
-  min-width:150px;
-  padding:8px 14px 8px 8px;
+  padding:12px 34px 12px 12px;
 
   border:1px solid rgba(255,255,255,.10);
-  border-radius:12px;
+  border-radius:15px;
 
   background:rgba(255,255,255,.045);
 
-  opacity:.6;
-  transform:scale(.95);
-
   transition:
-    opacity .18s ease,
-    transform .18s ease,
     border-color .18s ease,
     background .18s ease,
     box-shadow .18s ease;
 }
 
-.turnParticipantCard.isCurrentTurn{
-  opacity:1;
-  transform:scale(1);
-
-  min-width:190px;
-  padding:9px 18px 9px 9px;
-
+.qParticipantCard.isCurrentTurn{
   border-color:rgba(32,217,255,.55);
 
   background:linear-gradient(
@@ -2840,72 +3002,67 @@ select option{background:#101c31;color:#fff}
   box-shadow:0 8px 22px rgba(32,217,255,.20);
 }
 
-.turnParticipantCard .turnParticipantImage{
-  width:40px;
-  height:40px;
-  flex:0 0 40px;
+.qParticipantAvatar{
+  width:46px;
+  height:46px;
+  flex:0 0 46px;
 
   overflow:hidden;
-  border-radius:8px;
-
-  transition:width .18s ease, height .18s ease, flex-basis .18s ease;
+  border-radius:11px;
 }
 
-.turnParticipantCard.isCurrentTurn .turnParticipantImage{
-  width:54px;
-  height:54px;
-  flex:0 0 54px;
+.qParticipantCard.isCurrentTurn .qParticipantAvatar{
+  width:52px;
+  height:52px;
+  flex:0 0 52px;
 }
 
-.turnParticipantCard .turnParticipantImage img{
+.qParticipantAvatar img{
   width:100%;
   height:100%;
   display:block;
   object-fit:cover;
 }
 
-.turnParticipantCard .turnParticipantData{
+.qParticipantInfo{
   display:flex;
   flex-direction:column;
   justify-content:center;
   min-width:0;
 }
 
-.turnParticipantCard .turnParticipantName{
-  font-size:12.5px;
+.qParticipantName{
+  font-size:15px;
   font-weight:800;
-  line-height:1.2;
-  color:#c9dcee;
+  line-height:1.3;
+  color:#dbe9f9;
 
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
-  max-width:110px;
+  max-width:150px;
 }
 
-.turnParticipantCard.isCurrentTurn .turnParticipantName{
-  font-size:15px;
-  font-weight:950;
+.qParticipantCard.isCurrentTurn .qParticipantName{
   color:#fff;
-  max-width:140px;
+  font-weight:950;
 }
 
-.turnParticipantCard .turnParticipantPoints{
+.qParticipantScore{
   margin-top:3px;
-  font-size:11px;
-  font-weight:800;
-  color:#8fa3b9;
+  font-size:15px;
+  font-weight:900;
+  color:#9db2c8;
 }
 
-.turnParticipantCard.isCurrentTurn .turnParticipantPoints{
-  font-size:14px;
+.qParticipantCard.isCurrentTurn .qParticipantScore{
   color:#20d9ff;
 }
 
 .turnBadge{
   position:absolute;
-  top:-9px;
-  right:10px;
+  top:9px;
+  right:9px;
 
   padding:2px 9px;
   border-radius:999px;
@@ -2913,9 +3070,9 @@ select option{background:#101c31;color:#fff}
   background:#20d9ff;
   color:#04222c;
 
-  font-size:8px;
+  font-size:9px;
   font-weight:950;
-  letter-spacing:.6px;
+  letter-spacing:.5px;
 
   box-shadow:0 3px 10px rgba(32,217,255,.4);
 }
@@ -3174,6 +3331,7 @@ select option{background:#101c31;color:#fff}
 .topicStartOverlay{
   position:absolute;
   inset:0;
+  z-index:2;
 
   display:flex;
   align-items:center;
@@ -3181,7 +3339,7 @@ select option{background:#101c31;color:#fff}
   gap:8px;
 
   background:
-    rgba(20,110,255,.88);
+    rgba(20,110,255,.45);
 
   color:#fff;
 
@@ -3362,6 +3520,10 @@ select option{background:#101c31;color:#fff}
     gap:10px !important;
   }
 
+  .controlDockWide{
+    grid-template-columns:1fr !important;
+  }
+
   .toolBox{
     padding:13px !important;
     border-radius:14px !important;
@@ -3446,48 +3608,68 @@ select option{background:#101c31;color:#fff}
 
   /* ---------- QUESTION MODAL ---------- */
 
+  .questionModalWrap{
+    flex-direction:column !important;
+    gap:14px !important;
+    max-height:92vh !important;
+  }
+
+  .questionBox{
+    width:100% !important;
+    padding:18px 16px !important;
+  }
+
+  .participantsSideBox{
+    width:100% !important;
+    flex:0 0 auto !important;
+    max-height:170px !important;
+    padding:12px 10px !important;
+  }
+
+  .questionParticipants{
+    flex-direction:row !important;
+    overflow-x:auto !important;
+    overflow-y:hidden !important;
+    padding-bottom:6px !important;
+  }
+
+  .qParticipantCard{
+    flex:0 0 auto;
+    min-width:160px;
+    padding:9px 28px 9px 9px !important;
+  }
+
+  .qParticipantCard.isCurrentTurn{
+    min-width:180px;
+  }
+
+  .qParticipantName{
+    font-size:14px !important;
+  }
+
+  .qParticipantScore{
+    font-size:14px !important;
+  }
+
   #qText{
-    font-size:22px !important;
+    font-size:30px !important;
     margin:16px 0 14px !important;
-    line-height:1.35;
+    line-height:1.3;
+  }
+
+  #aText{
+    font-size:24px !important;
+  }
+
+  .answerOption{
+    font-size:17px !important;
+    min-height:64px !important;
   }
 
   .questionTop #timer{
     min-width:56px !important;
     padding:6px 10px !important;
-    font-size:16px !important;
-  }
-
-  .turnParticipantCard{
-    min-width:130px;
-    padding:6px 11px 6px 6px;
-  }
-
-  .turnParticipantCard.isCurrentTurn{
-    min-width:160px;
-    padding:7px 14px 7px 7px;
-  }
-
-  .turnParticipantCard .turnParticipantImage{
-    width:32px;
-    height:32px;
-    flex-basis:32px;
-  }
-
-  .turnParticipantCard.isCurrentTurn .turnParticipantImage{
-    width:42px;
-    height:42px;
-    flex-basis:42px;
-  }
-
-  .turnParticipantCard .turnParticipantName{
-    font-size:11.5px;
-    max-width:90px;
-  }
-
-  .turnParticipantCard.isCurrentTurn .turnParticipantName{
-    font-size:13px;
-    max-width:110px;
+    font-size:18px !important;
   }
 
   /* ---------- INTRO / BRIEFING MODAL ---------- */
@@ -3526,8 +3708,8 @@ select option{background:#101c31;color:#fff}
     min-height:82px !important;
   }
 
-  #qText{font-size:19px !important}
+  #qText{font-size:25px !important}
 
-  .turnParticipantCard{min-width:112px}
-  .turnParticipantCard.isCurrentTurn{min-width:140px}
+  .qParticipantCard{min-width:140px}
+  .qParticipantCard.isCurrentTurn{min-width:160px}
 }
