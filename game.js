@@ -144,6 +144,114 @@ function getTopicsDocRef() {
     : null;
 }
 
+function readLocalArray(key) {
+  try {
+    const value = JSON.parse(localStorage.getItem(key));
+    return Array.isArray(value) ? value : [];
+  } catch {
+    return [];
+  }
+}
+
+function topicQuestionCount(topic) {
+  const questions = topic?.questions;
+
+  if (!questions || typeof questions !== "object") {
+    return 0;
+  }
+
+  return Object.values(questions).reduce(
+    (total, category) =>
+      total + (Array.isArray(category) ? category.length : 0),
+    0
+  );
+}
+
+async function migrateLocalDataToFirebase() {
+  if (!currentUserUid || !db || !navigator.onLine) return;
+
+  const participantLists = [
+    readLocalArray(PARTICIPANTS_KEY()),
+    readLocalArray("participants_guest")
+  ];
+
+  const topicLists = [
+    readLocalArray(getUserTopicsLSKey()),
+    readLocalArray("userTopics_guest")
+  ];
+
+  const participantsRef = getParticipantsDocRef();
+  const topicsRef = getTopicsDocRef();
+
+  try {
+    const [participantsSnap, topicsSnap, legacySnap] = await Promise.all([
+      getDoc(participantsRef),
+      getDoc(topicsRef),
+      getDoc(getUserDocRef())
+    ]);
+
+    const remoteParticipants = participantsSnap.exists()
+      ? participantsSnap.data().participants
+      : legacySnap.data()?.participants;
+
+    const mergedParticipants = mergeParticipantStats(
+      participantLists.flat(),
+      Array.isArray(remoteParticipants) ? remoteParticipants : []
+    );
+
+    if (mergedParticipants.length) {
+      await setDoc(
+        participantsRef,
+        { participants: mergedParticipants },
+        { merge: true }
+      );
+      localStorage.setItem(
+        PARTICIPANTS_KEY(),
+        JSON.stringify(mergedParticipants)
+      );
+    }
+
+    const remoteTopics = topicsSnap.exists()
+      ? topicsSnap.data().topics
+      : legacySnap.data()?.topics;
+    const topicsById = new Map();
+
+    (Array.isArray(remoteTopics) ? remoteTopics : []).forEach(topic => {
+      if (topic?.id) topicsById.set(String(topic.id), topic);
+    });
+
+    topicLists.flat().forEach(topic => {
+      if (!topic?.id) return;
+
+      const key = String(topic.id);
+      const existing = topicsById.get(key);
+
+      if (!existing || topicQuestionCount(topic) >= topicQuestionCount(existing)) {
+        topicsById.set(key, topic);
+      }
+    });
+
+    const mergedTopics = [...topicsById.values()].map(topic => ({
+      ...topic,
+      questions: normalizeTopicQuestionsForStorage(topic.questions)
+    }));
+
+    if (mergedTopics.length) {
+      await setDoc(
+        topicsRef,
+        { topics: mergedTopics },
+        { merge: true }
+      );
+      localStorage.setItem(
+        getUserTopicsLSKey(),
+        JSON.stringify(mergedTopics)
+      );
+    }
+  } catch (error) {
+    console.warn("Local data migration:", error);
+  }
+}
+
 function normalizeParticipant(participant) {
   return {
     id: participant.id ?? "p_" + Date.now() + Math.random(),
@@ -5664,6 +5772,8 @@ onAuthStateChanged(
       "uid",
       currentUserUid
     );
+
+    await migrateLocalDataToFirebase();
 
     await loadParticipants();
 
