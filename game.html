@@ -77,6 +77,7 @@
 
       <div class="modalActions">
         <button class="bigBtn secondaryBtn" onclick="closeTopicIntroModal()">Yopish</button>
+        <button class="bigBtn duelBtn" id="introDuelBtn">⚔ Duel</button>
         <button class="bigBtn primaryBtn" id="introPlayBtn">▶ Play</button>
       </div>
     </div>
@@ -289,6 +290,83 @@
         <div id="questionParticipants" class="questionParticipants"></div>
       </aside>
 
+    </div>
+  </div>
+
+  <!-- =========================
+       DUEL MODAL — KATTA EKRAN / TOUCH
+  ========================== -->
+  <div class="modal duelModal" id="duelModal">
+    <div class="duelArena">
+
+      <!-- Qarama-qarshi o'tirgan o'yinchi uchun 180° aylantirilgan tomon -->
+      <div class="duelSide duelSideB">
+        <div class="duelSideHeader">
+          <div class="duelPlayerBadge">
+            <img id="duelBImg" src="" alt="">
+            <span id="duelBName"></span>
+          </div>
+          <div class="duelPlayerScore">
+            ✅ <span id="duelBCorrect">0</span>&nbsp;&nbsp;❌ <span id="duelBWrong">0</span>
+          </div>
+        </div>
+        <div class="duelQText" id="duelBQText"></div>
+        <div class="duelAnswerOptions" id="duelBAnswers"></div>
+      </div>
+
+      <div class="duelCenter">
+        <button class="duelExitBtn" id="duelExitBtn" title="Chiqish">×</button>
+        <div class="duelRoundLabel">
+          RAUND <span id="duelRoundNow">1</span>/<span id="duelRoundTotal">8</span>
+        </div>
+        <div class="duelTimerRing" id="duelTimer">10</div>
+
+        <!-- Kim yutayotganini ko'rsatuvchi "yo'l" -->
+        <div class="duelProgressTrack">
+          <div class="duelProgressMid"></div>
+          <div class="duelProgressFillB" id="duelProgressFillB"></div>
+          <div class="duelProgressFillA" id="duelProgressFillA"></div>
+        </div>
+
+        <div class="duelVs">VS</div>
+      </div>
+
+      <!-- Ekranning shu tomonida o'tirgan o'yinchi uchun oddiy holat -->
+      <div class="duelSide duelSideA">
+        <div class="duelSideHeader">
+          <div class="duelPlayerBadge">
+            <img id="duelAImg" src="" alt="">
+            <span id="duelAName"></span>
+          </div>
+          <div class="duelPlayerScore">
+            ✅ <span id="duelACorrect">0</span>&nbsp;&nbsp;❌ <span id="duelAWrong">0</span>
+          </div>
+        </div>
+        <div class="duelQText" id="duelAQText"></div>
+        <div class="duelAnswerOptions" id="duelAAnswers"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =========================
+       DUEL NATIJASI
+  ========================== -->
+  <div class="modal" id="duelResultModal">
+    <div class="modal-box duelResultBox">
+      <div class="modalHeader">
+        <div>
+          <span class="eyebrow">DUEL YAKUNI</span>
+          <h2>⚔ Duel natijasi</h2>
+        </div>
+        <button class="iconBtn" onclick="closeDuelResultModal()">×</button>
+      </div>
+
+      <div id="duelResultContent"></div>
+
+      <div class="modalActions">
+        <button class="bigBtn primaryBtn wideBtn" onclick="closeDuelResultModal()">Yopish</button>
+      </div>
     </div>
   </div>
 

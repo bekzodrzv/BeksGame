@@ -47,6 +47,35 @@ let soloStats = {
   wrong: 0
 };
 
+/*
+ * ===============================================
+ * DUEL REJIMI — ikki ishtirokchi bir vaqtda,
+ * ekranning ikki tomonidan (biri 180° aylantirilgan)
+ * turli tasodifiy savollarga javob beradi.
+ * ===============================================
+ */
+let duelActive = false;
+let duelPool = [];
+let duelRoundIndex = 0;
+let duelTotalRounds = 0;
+let duelTimer = null;
+let duelTimeLeft = 0;
+
+let duelPlayers = {
+  a: null,
+  b: null
+};
+
+let duelRound = {
+  a: { item: null, correct: "", answered: false, startedAt: 0 },
+  b: { item: null, correct: "", answered: false, startedAt: 0 }
+};
+
+let duelStats = {
+  a: { correct: 0, wrong: 0, totalTimeMs: 0 },
+  b: { correct: 0, wrong: 0, totalTimeMs: 0 }
+};
+
 const $ = id => document.getElementById(id);
 const clickSound = $("clickSound");
 const winnerSound = $("winnerSound");
@@ -1851,6 +1880,878 @@ function confirmStartTopicGame() {
   startTopicGame(
     topic
   );
+}
+
+/* =========================================================
+   DUEL REJIMI
+========================================================= */
+
+function createGuestDuelTeam(name) {
+  return {
+    id: "guest_" + Date.now() + "_" + Math.random().toString(36).slice(2),
+    participantId: null,
+    name,
+    image: "",
+    score: 0,
+    correctCount: 0,
+    wrongCount: 0
+  };
+}
+
+function confirmStartDuel() {
+
+  if (!pendingIntroTopic) return;
+
+  let playerA = null;
+  let playerB = null;
+
+  if (teamsData.length === 2) {
+
+    playerA = teamsData[0];
+    playerB = teamsData[1];
+
+  } else if (teamsData.length === 1) {
+
+    /*
+     * 1 ta ishtirokchi tanlangan —
+     * ikkinchisi avtomatik
+     * mehmon sifatida qo'shiladi.
+     */
+    playerA = teamsData[0];
+    playerB =
+      createGuestDuelTeam(
+        "Ishtirokchi 2"
+      );
+
+  } else if (teamsData.length === 0) {
+
+    /*
+     * Ishtirokchi tanlanmagan —
+     * ikkalasi ham avtomatik
+     * "Ishtirokchi 1"/"Ishtirokchi 2"
+     * nomi bilan boshlanadi.
+     */
+    playerA =
+      createGuestDuelTeam(
+        "Ishtirokchi 1"
+      );
+
+    playerB =
+      createGuestDuelTeam(
+        "Ishtirokchi 2"
+      );
+
+  } else {
+
+    alert(
+      "Duel uchun 2 ta ishtirokchi tanlang (yoki hech kimni tanlamang)!"
+    );
+
+    return;
+  }
+
+  const topic =
+    pendingIntroTopic;
+
+  closeTopicIntroModal();
+
+  selectUserTopic(
+    topic.id
+  );
+
+  startDuel(
+    topic,
+    playerA,
+    playerB
+  );
+}
+
+window.confirmStartDuel =
+  confirmStartDuel;
+
+function startDuel(topic, playerA, playerB) {
+
+  if (!topic) return;
+
+  /*
+   * Mavzudagi barcha savollarni
+   * bitta massivga yig'ib,
+   * tasodifiy tartibga solamiz.
+   */
+  let pool = [];
+
+  Object.values(
+    topic.questions || {}
+  ).forEach(category => {
+
+    if (!Array.isArray(category)) {
+      return;
+    }
+
+    category.forEach(item => {
+      if (item) pool.push(item);
+    });
+
+  });
+
+  if (pool.length < 2) {
+
+    alert(
+      "Duel uchun mavzuda kamida 2 ta savol bo‘lishi kerak!"
+    );
+
+    return;
+  }
+
+  pool = shuffleArray(pool);
+
+  /*
+   * Ikki tomonga BIR XIL savol
+   * tushib qolmasligi uchun,
+   * pool'ni ikkiga bo'lib,
+   * har biriga alohida navbat
+   * beramiz (A: juft, B: toq).
+   */
+  duelPool = pool;
+
+  duelTotalRounds =
+    Math.max(
+      1,
+      Math.floor(pool.length / 2)
+    );
+
+  duelRoundIndex = 0;
+
+  duelPlayers = {
+    a: playerA || teamsData[0],
+    b: playerB || teamsData[1]
+  };
+
+  duelStats = {
+    a: { correct: 0, wrong: 0, totalTimeMs: 0 },
+    b: { correct: 0, wrong: 0, totalTimeMs: 0 }
+  };
+
+  duelActive = true;
+
+  updateDuelStatsUI();
+
+  /*
+   * Ishtirokchilar ma'lumotlari
+   */
+  const pa =
+    findParticipant(
+      duelPlayers.a.participantId
+    );
+
+  const pb =
+    findParticipant(
+      duelPlayers.b.participantId
+    );
+
+  if ($("duelAImg")) {
+    $("duelAImg").src =
+      pa?.image ||
+      duelPlayers.a.image ||
+      avatarData(duelPlayers.a.name);
+  }
+
+  if ($("duelBImg")) {
+    $("duelBImg").src =
+      pb?.image ||
+      duelPlayers.b.image ||
+      avatarData(duelPlayers.b.name);
+  }
+
+  if ($("duelAName")) {
+    $("duelAName").textContent =
+      duelPlayers.a.name;
+  }
+
+  if ($("duelBName")) {
+    $("duelBName").textContent =
+      duelPlayers.b.name;
+  }
+
+  if ($("duelRoundTotal")) {
+    $("duelRoundTotal").textContent =
+      duelTotalRounds;
+  }
+
+  const modal =
+    $("duelModal");
+
+  if (modal) {
+    modal.style.display =
+      "flex";
+  }
+
+  renderDuelRound();
+}
+
+function renderDuelRound() {
+
+  if (!duelActive) return;
+
+  const itemA =
+    duelPool[
+      duelRoundIndex * 2
+    ];
+
+  const itemB =
+    duelPool[
+      duelRoundIndex * 2 + 1
+    ];
+
+  if (!itemA || !itemB) {
+    finishDuel();
+    return;
+  }
+
+  duelRound = {
+    a: {
+      item: itemA,
+      correct: String(
+        itemA.a ??
+        itemA.answer ??
+        ""
+      ).trim(),
+      answered: false,
+      startedAt: Date.now()
+    },
+    b: {
+      item: itemB,
+      correct: String(
+        itemB.a ??
+        itemB.answer ??
+        ""
+      ).trim(),
+      answered: false,
+      startedAt: Date.now()
+    }
+  };
+
+  if ($("duelRoundNow")) {
+    $("duelRoundNow").textContent =
+      duelRoundIndex + 1;
+  }
+
+  renderDuelSide("a", itemA);
+  renderDuelSide("b", itemB);
+
+  updateDuelStatsUI();
+
+  startDuelRoundTimer();
+}
+
+function renderDuelSide(side, item) {
+
+  const qBox =
+    $(
+      side === "a"
+        ? "duelAQText"
+        : "duelBQText"
+    );
+
+  const optBox =
+    $(
+      side === "a"
+        ? "duelAAnswers"
+        : "duelBAnswers"
+    );
+
+  if (!qBox || !optBox) return;
+
+  qBox.textContent =
+    item.q ??
+    item.question ??
+    "";
+
+  const correct =
+    duelRound[side].correct;
+
+  const options =
+    buildAnswerOptions(
+      correct,
+      item
+    );
+
+  optBox.innerHTML = "";
+
+  options.forEach(
+    (answer, i) => {
+
+      const btn =
+        document.createElement(
+          "button"
+        );
+
+      btn.type = "button";
+      btn.className =
+        "answerOption duelAnswerBtn";
+
+      btn.dataset.answer =
+        answer;
+
+      btn.innerHTML = `
+        <span class="answerLetter">
+          ${String.fromCharCode(
+            65 + i
+          )}
+        </span>
+        <span class="answerText"></span>
+      `;
+
+      btn.querySelector(
+        ".answerText"
+      ).textContent =
+        answer;
+
+      btn.onclick = () =>
+        handleDuelAnswer(
+          side,
+          btn,
+          answer,
+          correct
+        );
+
+      optBox.appendChild(
+        btn
+      );
+    }
+  );
+}
+
+function startDuelRoundTimer() {
+
+  clearInterval(
+    duelTimer
+  );
+
+  duelTimeLeft =
+    userTimer || 10;
+
+  const el =
+    $("duelTimer");
+
+  if (el) {
+    el.textContent =
+      duelTimeLeft;
+  }
+
+  duelTimer = setInterval(
+    () => {
+
+      duelTimeLeft--;
+
+      if (el) {
+        el.textContent =
+          Math.max(
+            0,
+            duelTimeLeft
+          );
+      }
+
+      if (duelTimeLeft <= 0) {
+
+        clearInterval(
+          duelTimer
+        );
+
+        /*
+         * Vaqt tugasa, javob
+         * bermagan tomon(lar)
+         * avtomatik xato deb
+         * hisoblanadi.
+         */
+        ["a", "b"].forEach(
+          side => {
+
+            if (
+              !duelRound[side]
+                .answered
+            ) {
+              resolveDuelSide(
+                side,
+                false,
+                true
+              );
+            }
+
+          }
+        );
+
+      }
+
+    },
+    1000
+  );
+}
+
+function handleDuelAnswer(
+  side,
+  button,
+  selected,
+  correct
+) {
+
+  if (
+    !duelActive ||
+    duelRound[side].answered
+  ) {
+    return;
+  }
+
+  const isCorrect =
+    String(selected).trim() ===
+    String(correct).trim();
+
+  const optBox =
+    $(
+      side === "a"
+        ? "duelAAnswers"
+        : "duelBAnswers"
+    );
+
+  optBox
+    ?.querySelectorAll(
+      ".duelAnswerBtn"
+    )
+    .forEach(btn => {
+
+      btn.disabled = true;
+
+      const value =
+        String(
+          btn.dataset.answer ??
+          ""
+        ).trim();
+
+      if (
+        value ===
+        String(correct).trim()
+      ) {
+        btn.classList.add(
+          "correct"
+        );
+      }
+
+      if (
+        btn === button &&
+        !isCorrect
+      ) {
+        btn.classList.add(
+          "wrong"
+        );
+      }
+
+    });
+
+  resolveDuelSide(
+    side,
+    isCorrect,
+    false
+  );
+}
+
+function resolveDuelSide(
+  side,
+  isCorrect,
+  timedOut
+) {
+
+  if (duelRound[side].answered) {
+    return;
+  }
+
+  duelRound[side].answered =
+    true;
+
+  const timeMs =
+    timedOut
+      ? (userTimer || 10) * 1000
+      : Date.now() -
+        duelRound[side].startedAt;
+
+  duelStats[side].totalTimeMs +=
+    timeMs;
+
+  if (isCorrect) {
+    duelStats[side].correct++;
+  } else {
+    duelStats[side].wrong++;
+  }
+
+  /*
+   * Vaqt tugab javob berilmagan
+   * bo'lsa ham, to'g'ri javobni
+   * ko'rsatib qo'yamiz.
+   */
+  if (timedOut) {
+
+    const optBox =
+      $(
+        side === "a"
+          ? "duelAAnswers"
+          : "duelBAnswers"
+      );
+
+    optBox
+      ?.querySelectorAll(
+        ".duelAnswerBtn"
+      )
+      .forEach(btn => {
+
+        btn.disabled = true;
+
+        const value =
+          String(
+            btn.dataset.answer ??
+            ""
+          ).trim();
+
+        if (
+          value ===
+          duelRound[side].correct
+        ) {
+          btn.classList.add(
+            "correct"
+          );
+        }
+
+      });
+  }
+
+  updateDuelStatsUI();
+
+  /*
+   * Ikkala tomon ham javob
+   * berdimi? Berilgan bo'lsa,
+   * qisqa pauzadan so'ng
+   * keyingi raundga o'tamiz.
+   */
+  if (
+    duelRound.a.answered &&
+    duelRound.b.answered
+  ) {
+
+    clearInterval(
+      duelTimer
+    );
+
+    setTimeout(
+      () => {
+
+        duelRoundIndex++;
+
+        if (
+          duelRoundIndex >=
+          duelTotalRounds
+        ) {
+          finishDuel();
+        } else {
+          renderDuelRound();
+        }
+
+      },
+      1800
+    );
+
+  }
+}
+
+function updateDuelStatsUI() {
+
+  if ($("duelACorrect")) {
+    $("duelACorrect").textContent =
+      duelStats.a.correct;
+  }
+
+  if ($("duelAWrong")) {
+    $("duelAWrong").textContent =
+      duelStats.a.wrong;
+  }
+
+  if ($("duelBCorrect")) {
+    $("duelBCorrect").textContent =
+      duelStats.b.correct;
+  }
+
+  if ($("duelBWrong")) {
+    $("duelBWrong").textContent =
+      duelStats.b.wrong;
+  }
+
+  updateDuelProgressBar();
+}
+
+function updateDuelProgressBar() {
+
+  const step =
+    Number(pointStep) || 100;
+
+  const scoreA =
+    duelStats.a.correct * step -
+    duelStats.a.wrong * step;
+
+  const scoreB =
+    duelStats.b.correct * step -
+    duelStats.b.wrong * step;
+
+  const diff =
+    scoreA - scoreB;
+
+  /*
+   * 5 ball farqida "yo'l"
+   * to'liq to'lgan bo'ladi.
+   */
+  const maxDiff =
+    step * 5;
+
+  const ratio =
+    Math.max(
+      -1,
+      Math.min(
+        1,
+        diff / maxDiff
+      )
+    );
+
+  const percent =
+    Math.abs(ratio) * 50;
+
+  const fillA =
+    $("duelProgressFillA");
+
+  const fillB =
+    $("duelProgressFillB");
+
+  const pctA =
+    ratio > 0
+      ? percent
+      : 0;
+
+  const pctB =
+    ratio < 0
+      ? percent
+      : 0;
+
+  if (fillA) {
+    fillA.style.height =
+      pctA + "%";
+    fillA.style.width =
+      pctA + "%";
+  }
+
+  if (fillB) {
+    fillB.style.height =
+      pctB + "%";
+    fillB.style.width =
+      pctB + "%";
+  }
+}
+
+function finishDuel() {
+
+  duelActive = false;
+
+  clearInterval(
+    duelTimer
+  );
+
+  const modal =
+    $("duelModal");
+
+  if (modal) {
+    modal.style.display =
+      "none";
+  }
+
+  /*
+   * G'olibni aniqlaymiz:
+   * ko'proq to'g'ri javob —
+   * teng bo'lsa, tezroq javob
+   * bergan g'olib bo'ladi.
+   */
+  const a = duelStats.a;
+  const b = duelStats.b;
+
+  let winnerSide = null;
+
+  if (a.correct !== b.correct) {
+    winnerSide =
+      a.correct > b.correct
+        ? "a"
+        : "b";
+  } else if (
+    a.totalTimeMs !==
+    b.totalTimeMs
+  ) {
+    winnerSide =
+      a.totalTimeMs <
+      b.totalTimeMs
+        ? "a"
+        : "b";
+  }
+
+  /*
+   * Umumiy ball tizimiga
+   * ham qo'shib qo'yamiz —
+   * statistikalar boshqa
+   * ekranlar bilan mos bo'lsin.
+   */
+  const step =
+    Number(pointStep) || 100;
+
+  const teamA =
+    duelPlayers.a;
+
+  const teamB =
+    duelPlayers.b;
+
+  if (teamA) {
+    teamA.score +=
+      a.correct * step -
+      a.wrong * step;
+
+    teamA.correctCount =
+      (teamA.correctCount || 0) +
+      a.correct;
+
+    teamA.wrongCount =
+      (teamA.wrongCount || 0) +
+      a.wrong;
+
+    updateTeamScoreUI(
+      teamA
+    );
+  }
+
+  if (teamB) {
+    teamB.score +=
+      b.correct * step -
+      b.wrong * step;
+
+    teamB.correctCount =
+      (teamB.correctCount || 0) +
+      b.correct;
+
+    teamB.wrongCount =
+      (teamB.wrongCount || 0) +
+      b.wrong;
+
+    updateTeamScoreUI(
+      teamB
+    );
+  }
+
+  showDuelResult(
+    winnerSide,
+    a,
+    b
+  );
+}
+
+function showDuelResult(
+  winnerSide,
+  a,
+  b
+) {
+
+  const box =
+    $("duelResultContent");
+
+  if (!box) return;
+
+  const nameA =
+    duelPlayers.a?.name || "A";
+
+  const nameB =
+    duelPlayers.b?.name || "B";
+
+  const secA =
+    (a.totalTimeMs / 1000).toFixed(1);
+
+  const secB =
+    (b.totalTimeMs / 1000).toFixed(1);
+
+  const winnerText =
+    winnerSide === "a"
+      ? `🏆 ${escapeHtml(nameA)} g‘olib!`
+      : winnerSide === "b"
+      ? `🏆 ${escapeHtml(nameB)} g‘olib!`
+      : "🤝 Durrang!";
+
+  box.innerHTML = `
+    <div class="duelResultWinner">
+      ${winnerText}
+    </div>
+
+    <div class="duelResultGrid">
+
+      <div class="duelResultCard${
+        winnerSide === "a"
+          ? " isDuelWinner"
+          : ""
+      }">
+        <strong>${escapeHtml(nameA)}</strong>
+        <span>✅ ${a.correct} to‘g‘ri &nbsp; ❌ ${a.wrong} xato</span>
+        <span>⏱ ${secA} soniya</span>
+      </div>
+
+      <div class="duelResultCard${
+        winnerSide === "b"
+          ? " isDuelWinner"
+          : ""
+      }">
+        <strong>${escapeHtml(nameB)}</strong>
+        <span>✅ ${b.correct} to‘g‘ri &nbsp; ❌ ${b.wrong} xato</span>
+        <span>⏱ ${secB} soniya</span>
+      </div>
+
+    </div>
+  `;
+
+  const modal =
+    $("duelResultModal");
+
+  if (modal) {
+    modal.style.display =
+      "flex";
+  }
+
+  playWinSound();
+}
+
+function closeDuelResultModal() {
+
+  const modal =
+    $("duelResultModal");
+
+  if (modal) {
+    modal.style.display =
+      "none";
+  }
+}
+
+window.closeDuelResultModal =
+  closeDuelResultModal;
+
+function exitDuel() {
+
+  duelActive = false;
+
+  clearInterval(
+    duelTimer
+  );
+
+  const modal =
+    $("duelModal");
+
+  if (modal) {
+    modal.style.display =
+      "none";
+  }
 }
 
 function startTopicGame(topic) {
@@ -4312,6 +5213,20 @@ $("introPlayBtn")?.addEventListener(
   "click",
   () => {
     confirmStartTopicGame();
+  }
+);
+
+$("introDuelBtn")?.addEventListener(
+  "click",
+  () => {
+    confirmStartDuel();
+  }
+);
+
+$("duelExitBtn")?.addEventListener(
+  "click",
+  () => {
+    exitDuel();
   }
 );
 

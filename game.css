@@ -3713,3 +3713,455 @@ select option{background:#101c31;color:#fff}
   .qParticipantCard{min-width:140px}
   .qParticipantCard.isCurrentTurn{min-width:160px}
 }
+
+
+/* ==========================================================
+   DUEL TUGMASI (intro/briefing modalda)
+========================================================== */
+
+.duelBtn{
+  background:
+    linear-gradient(145deg,#ff5364,#c81f3a);
+  color:#fff;
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow:0 10px 26px rgba(255,83,100,.30);
+}
+
+.duelBtn:hover{
+  transform:translateY(-2px);
+  box-shadow:0 14px 32px rgba(255,83,100,.40);
+}
+
+
+/* ==========================================================
+   DUEL MODAL — KATTA EKRAN / TOUCH, IKKI TOMON YUZMA-YUZ
+   (yuqori tomon 180° aylantirilgan — qarama-qarshi
+   o'tirgan o'yinchi uchun to'g'ri o'qiladi)
+========================================================== */
+
+.duelModal{
+  padding:0;
+  background:#04070d;
+}
+
+.duelArena{
+  width:100%;
+  height:100%;
+  display:flex;
+  flex-direction:row;
+}
+
+.duelSide{
+  flex:1 1 50%;
+  min-width:0;
+
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+
+  padding:22px 34px;
+  overflow:auto;
+
+  background:
+    radial-gradient(circle at 50% 0,rgba(32,217,255,.08),transparent 45%),
+    #0b1729;
+}
+
+.duelSideB{
+  border-right:1px solid rgba(255,255,255,.08);
+}
+
+.duelSideA{
+  border-left:1px solid rgba(255,255,255,.08);
+}
+
+.duelSideHeader{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+
+  margin-bottom:20px;
+}
+
+.duelPlayerBadge{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.duelPlayerBadge img{
+  width:54px;
+  height:54px;
+  border-radius:14px;
+  object-fit:cover;
+  border:1px solid rgba(255,255,255,.15);
+}
+
+.duelPlayerBadge span{
+  font-size:23px;
+  font-weight:950;
+  color:#f1f6fb;
+}
+
+.duelPlayerScore{
+  font-size:19px;
+  font-weight:850;
+  color:#b8cbdf;
+  white-space:nowrap;
+}
+
+.duelQText{
+  flex:0 0 auto;
+  margin:8px 0 20px;
+
+  color:#f8fbff;
+  font-size:clamp(22px,2.6vw,34px);
+  line-height:1.28;
+  font-weight:900;
+  letter-spacing:-.5px;
+}
+
+.duelAnswerOptions{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:14px;
+}
+
+.duelAnswerBtn{
+  min-height:64px;
+  font-size:19px !important;
+}
+
+.duelCenter{
+  position:relative;
+  flex:0 0 auto;
+
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:18px;
+
+  width:96px;
+  padding:56px 8px 16px;
+
+  background:#04070d;
+  border-left:1px solid rgba(255,255,255,.06);
+  border-right:1px solid rgba(255,255,255,.06);
+}
+
+.duelRoundLabel{
+  color:#67e8f9;
+  font-size:12px;
+  font-weight:950;
+  letter-spacing:.5px;
+  text-align:center;
+}
+
+.duelTimerRing{
+  min-width:58px;
+  padding:8px 14px;
+
+  border-radius:999px;
+  border:1px solid rgba(255,83,100,.4);
+  background:rgba(255,83,100,.10);
+
+  color:#ff8a95;
+  font-size:24px;
+  font-weight:950;
+  text-align:center;
+}
+
+
+/* ==========================================================
+   DUEL PROGRESS "YO'L"I — kim yutayotganini
+   ko'k rang bilan to'lib boruvchi chiziq bilan
+   ko'rsatib turadi
+========================================================== */
+
+.duelProgressTrack{
+  position:relative;
+  flex:1 1 auto;
+
+  width:10px;
+  min-height:70px;
+
+  border-radius:999px;
+  background:rgba(255,255,255,.08);
+  overflow:hidden;
+}
+
+.duelProgressMid{
+  position:absolute;
+  left:-4px;
+  right:-4px;
+  top:50%;
+
+  height:2px;
+  background:rgba(255,255,255,.28);
+  transform:translateY(-50%);
+}
+
+.duelProgressFillA,
+.duelProgressFillB{
+  position:absolute;
+  left:0 !important;
+  right:0 !important;
+
+  height:0%;
+
+  background:linear-gradient(180deg,#20d9ff,#0891c9);
+  box-shadow:0 0 10px rgba(32,217,255,.5);
+
+  border-radius:999px;
+
+  transition:height .35s ease, width .35s ease;
+}
+
+.duelProgressFillA{
+  top:50%;
+}
+
+.duelProgressFillB{
+  bottom:50%;
+}
+
+.duelVs{
+  color:#4a5b70;
+  font-size:13px;
+  font-weight:950;
+  letter-spacing:2px;
+  writing-mode:vertical-rl;
+}
+
+.duelExitBtn{
+  position:absolute;
+  left:50%;
+  top:16px;
+  transform:translateX(-50%);
+
+  width:34px;
+  height:34px;
+
+  display:grid;
+  place-items:center;
+
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:10px;
+
+  background:rgba(255,255,255,.06);
+  color:#fff;
+
+  font-size:19px;
+  line-height:1;
+
+  cursor:pointer;
+}
+
+.duelExitBtn:hover{
+  background:rgba(255,83,100,.20);
+  border-color:rgba(255,83,100,.4);
+}
+
+
+/* ==========================================================
+   DUEL NATIJASI
+========================================================== */
+
+.duelResultBox{
+  width:min(680px,94vw);
+}
+
+.duelResultWinner{
+  margin:6px 0 18px;
+  text-align:center;
+
+  color:#fff;
+  font-size:26px;
+  font-weight:950;
+}
+
+.duelResultGrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+}
+
+.duelResultCard{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+
+  padding:16px;
+
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:16px;
+
+  background:rgba(255,255,255,.04);
+
+  text-align:center;
+}
+
+.duelResultCard strong{
+  font-size:21px;
+  color:#f1f6fb;
+}
+
+.duelResultCard span{
+  font-size:16px;
+  font-weight:750;
+  color:#b8cbdf;
+}
+
+.duelResultCard.isDuelWinner{
+  border-color:rgba(32,217,255,.55);
+
+  background:linear-gradient(
+    145deg,
+    rgba(32,217,255,.20),
+    rgba(255,255,255,.05)
+  );
+
+  box-shadow:0 10px 26px rgba(32,217,255,.20);
+}
+
+.duelResultCard.isDuelWinner strong{
+  color:#20d9ff;
+}
+
+
+/* ==========================================================
+   DUEL — MOBIL / KICHIK EKRAN MOSLASHUV
+========================================================== */
+
+@media(max-width:820px){
+
+  /*
+   * Telefon kabi tor ekranda ikki
+   * tomonni yonma-yon sig'dirib
+   * bo'lmaydi — shu holatda ustma-ust
+   * (tepa/past) ko'rinishga o'tamiz.
+   */
+  .duelArena{
+    flex-direction:column;
+  }
+
+  .duelSide{
+    flex:1 1 50%;
+    padding:14px 16px;
+  }
+
+  .duelSideB{
+    border-right:none;
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+
+  .duelSideA{
+    border-left:none;
+    border-top:1px solid rgba(255,255,255,.08);
+  }
+
+  .duelPlayerBadge img{
+    width:34px;
+    height:34px;
+    border-radius:9px;
+  }
+
+  .duelPlayerBadge span{
+    font-size:16px;
+  }
+
+  .duelPlayerScore{
+    font-size:14px;
+  }
+
+  .duelQText{
+    font-size:20px !important;
+    margin:6px 0 10px;
+  }
+
+  .duelAnswerOptions{
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+
+  .duelAnswerBtn{
+    min-height:48px;
+    font-size:14px !important;
+  }
+
+  .duelCenter{
+    flex-direction:row;
+    width:auto;
+    padding:8px 10px;
+    gap:10px;
+  }
+
+  .duelProgressTrack{
+    width:70px;
+    height:8px;
+    min-height:0;
+    flex:0 0 auto;
+  }
+
+  .duelProgressMid{
+    left:50%;
+    right:auto;
+    top:-4px;
+    bottom:-4px;
+    width:2px;
+    height:auto;
+    transform:translateX(-50%);
+  }
+
+  .duelProgressFillA,
+  .duelProgressFillB{
+    left:auto !important;
+    right:auto !important;
+    top:0 !important;
+    bottom:0 !important;
+    height:auto !important;
+    width:0%;
+  }
+
+  .duelProgressFillA{
+    left:50% !important;
+  }
+
+  .duelProgressFillB{
+    right:50% !important;
+  }
+
+  .duelVs{
+    writing-mode:horizontal-tb;
+  }
+
+  .duelTimerRing{
+    min-width:40px;
+    padding:4px 9px;
+    font-size:15px;
+  }
+
+  .duelRoundLabel{
+    font-size:10px;
+  }
+
+  .duelExitBtn{
+    left:auto;
+    right:8px;
+    top:50%;
+    transform:translateY(-50%);
+    width:28px;
+    height:28px;
+    font-size:15px;
+  }
+
+  .duelResultGrid{
+    grid-template-columns:1fr;
+  }
+
+  .duelResultWinner{
+    font-size:20px;
+  }
+}
