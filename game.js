@@ -17,7 +17,6 @@ let teamCount = 0;
 let teamsData = [];
 let gameInProgress = false;
 let gameHistory = [];
-const HISTORY_DISABLED = true;
 let userTimer = 10;
 let timer = null;
 let timeLeft = 0;
@@ -56,15 +55,10 @@ let soloStats = {
  * ===============================================
  */
 let duelActive = false;
-
-/*
- * Har bir tomon (A va B) endi mavzudagi
- * BARCHA savollarni oladi (o'zining alohida
- * aralashtirilgan nusxasida) va bir-biriga
- * bog'liq bo'lmagan holda, o'z tezligida
- * ishlaydi — biri ikkinchisini kutmaydi.
- */
+let duelPool = [];
+let duelRoundIndex = 0;
 let duelTotalRounds = 0;
+let duelTimer = null;
 let duelTimeLeft = 0;
 
 let duelPlayers = {
@@ -73,28 +67,8 @@ let duelPlayers = {
 };
 
 let duelRound = {
-  a: {
-    pool: [],
-    index: 0,
-    item: null,
-    correct: "",
-    answered: false,
-    finished: false,
-    startedAt: 0,
-    timer: null,
-    timeLeft: 0
-  },
-  b: {
-    pool: [],
-    index: 0,
-    item: null,
-    correct: "",
-    answered: false,
-    finished: false,
-    startedAt: 0,
-    timer: null,
-    timeLeft: 0
-  }
+  a: { item: null, correct: "", answered: false, startedAt: 0 },
+  b: { item: null, correct: "", answered: false, startedAt: 0 }
 };
 
 let duelStats = {
@@ -130,178 +104,6 @@ function getUserTopicsLSKey() {
 
 function getUserDocRef() {
   return currentUserUid && db ? doc(db, "users", currentUserUid) : null;
-}
-
-function getParticipantsDocRef() {
-  return currentUserUid && db
-    ? doc(db, "participants", currentUserUid)
-    : null;
-}
-
-function getTopicsDocRef() {
-  return currentUserUid && db
-    ? doc(db, "userTopics", currentUserUid)
-    : null;
-}
-
-function readLocalArray(key) {
-  try {
-    const value = JSON.parse(localStorage.getItem(key));
-    return Array.isArray(value) ? value : [];
-  } catch {
-    return [];
-  }
-}
-
-function topicQuestionCount(topic) {
-  const questions = topic?.questions;
-
-  if (!questions || typeof questions !== "object") {
-    return 0;
-  }
-
-  return Object.values(questions).reduce(
-    (total, category) =>
-      total + (Array.isArray(category) ? category.length : 0),
-    0
-  );
-}
-
-async function migrateLocalDataToFirebase() {
-  if (!currentUserUid || !db || !navigator.onLine) return;
-
-  const participantLists = [
-    readLocalArray(PARTICIPANTS_KEY()),
-    readLocalArray("participants_guest")
-  ];
-
-  const topicLists = [
-    readLocalArray(getUserTopicsLSKey()),
-    readLocalArray("userTopics_guest")
-  ];
-
-  const participantsRef = getParticipantsDocRef();
-  const topicsRef = getTopicsDocRef();
-
-  let participantsSnap = null;
-  let topicsSnap = null;
-  let legacySnap = null;
-
-  try {
-    participantsSnap = await getDoc(participantsRef);
-  } catch (error) {
-    console.warn("Participants document read:", error);
-  }
-
-  try {
-    topicsSnap = await getDoc(topicsRef);
-  } catch (error) {
-    console.warn("Topics document read:", error);
-  }
-
-  try {
-    legacySnap = await getDoc(getUserDocRef());
-  } catch (error) {
-    console.warn("Legacy user document read:", error);
-  }
-
-  try {
-    const remoteParticipants = participantsSnap?.exists()
-      ? participantsSnap.data().participants
-      : legacySnap?.data()?.participants;
-
-    const mergedParticipants = mergeParticipantStats(
-      participantLists.flat(),
-      Array.isArray(remoteParticipants) ? remoteParticipants : []
-    );
-
-    if (mergedParticipants.length && participantsRef) {
-      await setDoc(
-        participantsRef,
-        { participants: mergedParticipants },
-        { merge: true }
-      );
-      localStorage.setItem(
-        PARTICIPANTS_KEY(),
-        JSON.stringify(mergedParticipants)
-      );
-    }
-
-    const remoteTopics = topicsSnap?.exists()
-      ? topicsSnap.data().topics
-      : legacySnap?.data()?.topics;
-    const topicsById = new Map();
-
-    (Array.isArray(remoteTopics) ? remoteTopics : []).forEach(topic => {
-      if (topic?.id) topicsById.set(String(topic.id), topic);
-    });
-
-    topicLists.flat().forEach(topic => {
-      if (!topic?.id) return;
-
-      const key = String(topic.id);
-      const existing = topicsById.get(key);
-
-      if (!existing || topicQuestionCount(topic) >= topicQuestionCount(existing)) {
-        topicsById.set(key, topic);
-      }
-    });
-
-    const mergedTopics = [...topicsById.values()].map(topic => ({
-      ...topic,
-      questions: normalizeTopicQuestionsForStorage(topic.questions)
-    }));
-
-    if (mergedTopics.length && topicsRef) {
-      await setDoc(
-        topicsRef,
-        { topics: mergedTopics },
-        { merge: true }
-      );
-      localStorage.setItem(
-        getUserTopicsLSKey(),
-        JSON.stringify(mergedTopics)
-      );
-    }
-  } catch (error) {
-    console.warn("Local data migration:", error);
-  }
-}
-
-function normalizeParticipant(participant) {
-  return {
-    id: participant.id ?? "p_" + Date.now() + Math.random(),
-    name: String(participant.name ?? "Noma'lum"),
-    wins: Math.max(0, Number(participant.wins) || 0),
-    games: Math.max(0, Number(participant.games) || 0),
-    image: participant.image || ""
-  };
-}
-
-function mergeParticipantStats(localList, remoteList) {
-  const merged = new Map();
-
-  [...localList, ...remoteList].forEach(participant => {
-    const normalized = normalizeParticipant(participant);
-    const key = String(normalized.id) || normalizeName(normalized.name);
-    const existing = merged.get(key);
-
-    if (!existing) {
-      merged.set(key, normalized);
-      return;
-    }
-
-    merged.set(key, {
-      ...existing,
-      ...normalized,
-      name: normalized.name || existing.name,
-      wins: Math.max(existing.wins, normalized.wins),
-      games: Math.max(existing.games, normalized.games),
-      image: normalized.image || existing.image
-    });
-  });
-
-  return [...merged.values()];
 }
 
 /* ================= SETTINGS ================= */
@@ -375,7 +177,7 @@ async function saveParticipants() {
     JSON.stringify(participants)
   );
 
-  const ref = getParticipantsDocRef();
+  const ref = getUserDocRef();
 
   if (!ref) return;
 
@@ -387,20 +189,6 @@ async function saveParticipants() {
     );
   } catch (e) {
     console.warn("Participant Firebase save:", e);
-
-    const legacyRef = getUserDocRef();
-
-    if (legacyRef) {
-      try {
-        await setDoc(
-          legacyRef,
-          { participants },
-          { merge: true }
-        );
-      } catch (legacyError) {
-        console.warn("Legacy participant Firebase save:", legacyError);
-      }
-    }
   }
 }
 
@@ -419,42 +207,35 @@ async function loadParticipants() {
     participants = [];
   }
 
-  participants = participants.map(normalizeParticipant);
+  participants = participants.map(p => ({
+    id: p.id ?? Date.now() + Math.random(),
+    name: String(p.name ?? "Noma'lum"),
+    wins: Number(p.wins) || 0,
+    games: Number(p.games) || 0,
+    image: p.image || ""
+  }));
 
   renderParticipants();
 
-  const ref = getParticipantsDocRef();
+  const ref = getUserDocRef();
 
   if (!ref) return;
 
   try {
     const snap = await getDoc(ref);
 
-    let remote = snap.exists()
+    const remote = snap.exists()
       ? snap.data().participants
       : null;
 
-    if (!Array.isArray(remote)) {
-      const legacyRef = getUserDocRef();
-      const legacySnap = legacyRef
-        ? await getDoc(legacyRef)
-        : null;
-      remote = legacySnap?.exists()
-        ? legacySnap.data().participants
-        : null;
-    }
-
-    const loadedFromLegacy = !Array.isArray(
-      snap.exists()
-        ? snap.data().participants
-        : null
-    ) && Array.isArray(remote);
-
     if (Array.isArray(remote)) {
-      participants = mergeParticipantStats(
-        participants,
-        remote
-      );
+      participants = remote.map(p => ({
+        id: p.id ?? Date.now() + Math.random(),
+        name: String(p.name ?? "Noma'lum"),
+        wins: Number(p.wins) || 0,
+        games: Number(p.games) || 0,
+        image: p.image || ""
+      }));
 
       localStorage.setItem(
         PARTICIPANTS_KEY(),
@@ -462,38 +243,9 @@ async function loadParticipants() {
       );
 
       renderParticipants();
-
-      if (loadedFromLegacy) {
-        await saveParticipants();
-      }
     }
   } catch (e) {
-    console.warn("loadParticipants dedicated read:", e);
-
-    const legacyRef = getUserDocRef();
-
-    if (legacyRef) {
-      try {
-        const legacySnap = await getDoc(legacyRef);
-        const remote = legacySnap.exists()
-          ? legacySnap.data().participants
-          : null;
-
-        if (Array.isArray(remote)) {
-          participants = mergeParticipantStats(
-            participants,
-            remote
-          );
-          localStorage.setItem(
-            PARTICIPANTS_KEY(),
-            JSON.stringify(participants)
-          );
-          renderParticipants();
-        }
-      } catch (legacyError) {
-        console.warn("loadParticipants legacy read:", legacyError);
-      }
-    }
+    console.warn("loadParticipants:", e);
   }
 }
 
@@ -1347,6 +1099,33 @@ function questionsObjectToArray(obj) {
     ];
   }
 
+  /*
+   * MUHIM XATO TUZATILDI:
+   * "Randomizer" (savollarni
+   * aralashtirish) tugmasi
+   * mavzuni {shuffled:[...]}
+   * shaklga o'zgartirib
+   * qo'yar edi, lekin bu yer
+   * faqat eski 0-4 kategoriya
+   * shaklini tanir edi — shu
+   * sababli qayta yuklanganda
+   * (boshqa brovser/qayta kirish)
+   * savollar "yo'q" bo'lib
+   * ko'rinar edi. Endi ikkala
+   * shakl ham qo'llab-quvvatlanadi.
+   */
+  if (
+    Array.isArray(obj.shuffled)
+  ) {
+    return [
+      obj.shuffled,
+      [],
+      [],
+      [],
+      []
+    ];
+  }
+
   return [
     0,
     1,
@@ -1361,150 +1140,59 @@ function questionsObjectToArray(obj) {
   );
 }
 
-function normalizeTopicQuestionsForStorage(source) {
-  const normalized = {
-    0: [],
-    1: [],
-    2: [],
-    3: [],
-    4: []
-  };
-
-  const safeSource =
-    Array.isArray(source)
-      ? source
-      : questionsObjectToArray(
-          source
-        );
-
-  safeSource.forEach(
-    (category, index) => {
-      const list =
-        Array.isArray(category)
-          ? category
-          : [];
-
-      normalized[index] =
-        list.map(item => {
-          if (!item || typeof item !== "object") {
-            return item;
-          }
-
-          return {
-            ...item,
-            wrongAnswers:
-              Array.isArray(item.wrongAnswers)
-                ? item.wrongAnswers.map(value =>
-                    String(value ?? "").trim()
-                  )
-                : []
-          };
-        });
-    }
-  );
-
-  return normalized;
-}
-
-function syncCurrentTopicQuestionsToUserTopics() {
-  if (!currentUserTopicId) {
-    return;
-  }
-
-  const topic =
-    userTopics.find(
-      t => t.id === currentUserTopicId
-    );
-
-  if (!topic) {
-    return;
-  }
-
-  const source =
-    Array.isArray(questions)
-      ? questions
-      : questionsObjectToArray(
-          questions
-        );
-
-  const normalized =
-    normalizeTopicQuestionsForStorage(
-      source
-    );
-
-  topic.questions = normalized;
-  currentTopicQuestions =
-    Object.values(normalized).flat();
-}
-
 async function saveTopics() {
-  syncCurrentTopicQuestionsToUserTopics();
-
   localStorage.setItem(
     getUserTopicsLSKey(),
     JSON.stringify(userTopics)
   );
 
-  const ref = getTopicsDocRef();
+  const ref =
+    getUserDocRef();
 
-  if (!ref || !navigator.onLine) {
-    console.warn(
-      "saveTopics: Firestore skip (offline or no auth)."
-    );
-    return false;
-  }
-
-  const safeTopics = JSON.parse(
-    JSON.stringify(userTopics)
-  ).map(topic => ({
-    ...topic,
-    questions: normalizeTopicQuestionsForStorage(
-      topic.questions
-    )
-  }));
+  if (!ref) return;
 
   try {
+
+    /*
+     * MUHIM: Firestore "undefined"
+     * qiymatlarni umuman qabul
+     * qilmaydi va bunda setDoc
+     * shovqinsiz (silent) xatolik
+     * berib, hech narsa saqlamay
+     * qo'yadi. Shu sabab avval
+     * ma'lumotni JSON orqali
+     * "tozalab" (undefined larsiz)
+     * yuboramiz — shu Firestore'ga
+     * yangi savollar saqlanmay
+     * qolishining asosiy sababi edi.
+     */
+    const safeTopics =
+      JSON.parse(
+        JSON.stringify(
+          userTopics
+        )
+      );
+
     await setDoc(
       ref,
       { topics: safeTopics },
       { merge: true }
     );
-    return true;
+
   } catch (e) {
+
     console.error(
-      "saveTopics Firebase xatosi:",
+      "Topics Firebase save XATOSI:",
       e
     );
 
-    const legacyRef = getUserDocRef();
-
-    if (legacyRef) {
-      try {
-        await setDoc(
-          legacyRef,
-          { topics: safeTopics },
-          { merge: true }
-        );
-        return true;
-      } catch (legacyError) {
-        console.error(
-          "Legacy topics Firebase xatosi:",
-          legacyError
-        );
-      }
-    }
-
     alert(
-      "DIQQAT: savollar Firebase'ga saqlanmadi!\n\n" +
-      "Xatolik: " + (e?.message || e) + "\n\n" +
-      "Ehtimoliy sabab: mavzudagi savollar juda ko'p " +
-      "bo'lib, Firestore hujjat hajmi chegarasidan " +
-      "(taxminan 1MB) oshib ketgan bo'lishi mumkin. " +
-      "Bu holatda ba'zi savollarni alohida mavzularga " +
-      "bo'lib saqlash tavsiya etiladi."
+      "⚠️ Mavzular/savollar serverga saqlanmadi!\n\n" +
+      "Sababi: " +
+      (e?.message || e) +
+      "\n\nInternetni tekshirib, qayta urinib ko‘ring."
     );
 
-    return false;
   }
 }
 
@@ -1525,7 +1213,8 @@ async function loadTopicsSafe() {
 
   renderUserTopics();
 
-  const ref = getTopicsDocRef();
+  const ref =
+    getUserDocRef();
 
   if (!ref) return;
 
@@ -1533,20 +1222,10 @@ async function loadTopicsSafe() {
     const snap =
       await getDoc(ref);
 
-    let remote =
+    const remote =
       snap.exists()
         ? snap.data().topics
         : null;
-
-    if (!Array.isArray(remote)) {
-      const legacyRef = getUserDocRef();
-      const legacySnap = legacyRef
-        ? await getDoc(legacyRef)
-        : null;
-      remote = legacySnap?.exists()
-        ? legacySnap.data().topics
-        : null;
-    }
 
     if (Array.isArray(remote)) {
       userTopics =
@@ -1558,10 +1237,6 @@ async function loadTopicsSafe() {
       );
 
       renderUserTopics();
-
-      if (ref && !snap.exists()) {
-        await saveTopics();
-      }
     }
   } catch (e) {
     console.warn(
@@ -1951,21 +1626,11 @@ async function importExcelForUserTopic() {
       renderUserTopics();
       renderBoard();
 
-      const saved =
-        await saveTopics();
+      await saveTopics();
 
-      if (saved) {
-        alert(
-          "Excel muvaffaqiyatli yuklandi va saqlandi!"
-        );
-      } else {
-        alert(
-          "Excel yuklandi, lekin Firebase'ga saqlashda muammo bo'ldi " +
-          "(yuqoridagi xabarga qarang). Savollar shu qurilmada " +
-          "(localStorage) saqlandi, lekin boshqa qurilmada yoki " +
-          "sahifa keshi tozalansa yo'qolishi mumkin."
-        );
-      }
+      alert(
+        "Excel muvaffaqiyatli yuklandi!"
+      );
     };
 
   reader.readAsArrayBuffer(
@@ -2399,39 +2064,24 @@ function startDuel(topic, playerA, playerB) {
     return;
   }
 
+  pool = shuffleArray(pool);
+
   /*
-   * Har ikkala tomon ham mavzudagi
-   * BARCHA savollarni oladi — lekin
-   * har biri o'zining mustaqil
-   * aralashtirilgan tartibida, shu
-   * sabab ular bir xil vaqtda bir xil
-   * savolga duch kelmaydi.
+   * Ikki tomonga BIR XIL savol
+   * tushib qolmasligi uchun,
+   * pool'ni ikkiga bo'lib,
+   * har biriga alohida navbat
+   * beramiz (A: juft, B: toq).
    */
-  duelTotalRounds = pool.length;
+  duelPool = pool;
 
-  duelRound.a = {
-    pool: shuffleArray(pool.slice()),
-    index: 0,
-    item: null,
-    correct: "",
-    answered: false,
-    finished: false,
-    startedAt: 0,
-    timer: null,
-    timeLeft: 0
-  };
+  duelTotalRounds =
+    Math.max(
+      1,
+      Math.floor(pool.length / 2)
+    );
 
-  duelRound.b = {
-    pool: shuffleArray(pool.slice()),
-    index: 0,
-    item: null,
-    correct: "",
-    answered: false,
-    finished: false,
-    startedAt: 0,
-    timer: null,
-    timeLeft: 0
-  };
+  duelRoundIndex = 0;
 
   duelPlayers = {
     a: playerA || teamsData[0],
@@ -2497,89 +2147,62 @@ function startDuel(topic, playerA, playerB) {
       "flex";
   }
 
-  renderDuelSideRound("a");
-  renderDuelSideRound("b");
-
-  updateDuelRoundLabel();
+  renderDuelRound();
 }
 
-function updateDuelRoundLabel() {
-
-  const label =
-    $("duelRoundNow");
-
-  if (!label) return;
-
-  /*
-   * Ikkala tomon mustaqil
-   * ravishda ilgarilagani uchun,
-   * har birining o'z progressi
-   * alohida ko'rsatiladi.
-   */
-  const aNow =
-    Math.min(
-      duelRound.a.index + 1,
-      duelTotalRounds
-    );
-
-  const bNow =
-    Math.min(
-      duelRound.b.index + 1,
-      duelTotalRounds
-    );
-
-  label.textContent =
-    "A " + aNow + "/" + duelTotalRounds +
-    "   •   B " + bNow + "/" + duelTotalRounds;
-}
-
-function renderDuelSideRound(side) {
+function renderDuelRound() {
 
   if (!duelActive) return;
 
-  const state =
-    duelRound[side];
+  const itemA =
+    duelPool[
+      duelRoundIndex * 2
+    ];
 
-  if (state.finished) return;
+  const itemB =
+    duelPool[
+      duelRoundIndex * 2 + 1
+    ];
 
-  const item =
-    state.pool[state.index];
-
-  if (!item) {
-    state.finished = true;
-    checkDuelBothFinished();
+  if (!itemA || !itemB) {
+    finishDuel();
     return;
   }
 
-  state.item = item;
+  duelRound = {
+    a: {
+      item: itemA,
+      correct: String(
+        itemA.a ??
+        itemA.answer ??
+        ""
+      ).trim(),
+      answered: false,
+      startedAt: Date.now()
+    },
+    b: {
+      item: itemB,
+      correct: String(
+        itemB.a ??
+        itemB.answer ??
+        ""
+      ).trim(),
+      answered: false,
+      startedAt: Date.now()
+    }
+  };
 
-  state.correct =
-    String(
-      item.a ??
-      item.answer ??
-      ""
-    ).trim();
+  if ($("duelRoundNow")) {
+    $("duelRoundNow").textContent =
+      duelRoundIndex + 1;
+  }
 
-  state.answered = false;
-  state.startedAt = Date.now();
-
-  renderDuelSide(side, item);
-
-  updateDuelRoundLabel();
+  renderDuelSide("a", itemA);
+  renderDuelSide("b", itemB);
 
   updateDuelStatsUI();
 
-  startDuelRoundTimer(side);
-}
-
-function checkDuelBothFinished() {
-
-  if (
-    duelRound.a.finished &&
-    duelRound.b.finished
-  ) {
-    finishDuel();
-  }
+  startDuelRoundTimer();
 }
 
 function renderDuelSide(side, item) {
@@ -2660,64 +2283,64 @@ function renderDuelSide(side, item) {
   );
 }
 
-function startDuelRoundTimer(side) {
-
-  const state =
-    duelRound[side];
+function startDuelRoundTimer() {
 
   clearInterval(
-    state.timer
+    duelTimer
   );
 
-  state.timeLeft =
+  duelTimeLeft =
     userTimer || 10;
 
   const el =
-    $(
-      side === "a"
-        ? "duelATimer"
-        : "duelBTimer"
-    );
+    $("duelTimer");
 
   if (el) {
     el.textContent =
-      state.timeLeft;
+      duelTimeLeft;
   }
 
-  state.timer = setInterval(
+  duelTimer = setInterval(
     () => {
 
-      state.timeLeft--;
+      duelTimeLeft--;
 
       if (el) {
         el.textContent =
           Math.max(
             0,
-            state.timeLeft
+            duelTimeLeft
           );
       }
 
-      if (state.timeLeft <= 0) {
+      if (duelTimeLeft <= 0) {
 
         clearInterval(
-          state.timer
+          duelTimer
         );
 
         /*
-         * Vaqt tugasa, shu
-         * tomon javob bermagan
-         * bo'lsa avtomatik xato
-         * deb hisoblanadi — bu
-         * boshqa tomonga ta'sir
-         * qilmaydi.
+         * Vaqt tugasa, javob
+         * bermagan tomon(lar)
+         * avtomatik xato deb
+         * hisoblanadi.
          */
-        if (!state.answered) {
-          resolveDuelSide(
-            side,
-            false,
-            true
-          );
-        }
+        ["a", "b"].forEach(
+          side => {
+
+            if (
+              !duelRound[side]
+                .answered
+            ) {
+              resolveDuelSide(
+                side,
+                false,
+                true
+              );
+            }
+
+          }
+        );
 
       }
 
@@ -2863,36 +2486,39 @@ function resolveDuelSide(
   updateDuelStatsUI();
 
   /*
-   * Har bir tomon o'z javobidan
-   * so'ng, IKKINCHI TOMONNI
-   * KUTMASDAN, qisqa pauzadan
-   * keyin darhol o'zining
-   * navbatdagi savoliga o'tadi.
+   * Ikkala tomon ham javob
+   * berdimi? Berilgan bo'lsa,
+   * qisqa pauzadan so'ng
+   * keyingi raundga o'tamiz.
    */
-  clearInterval(
-    duelRound[side].timer
-  );
+  if (
+    duelRound.a.answered &&
+    duelRound.b.answered
+  ) {
 
-  setTimeout(
-    () => {
+    clearInterval(
+      duelTimer
+    );
 
-      if (!duelActive) return;
+    setTimeout(
+      () => {
 
-      duelRound[side].index++;
+        duelRoundIndex++;
 
-      if (
-        duelRound[side].index >=
-        duelRound[side].pool.length
-      ) {
-        duelRound[side].finished = true;
-        checkDuelBothFinished();
-      } else {
-        renderDuelSideRound(side);
-      }
+        if (
+          duelRoundIndex >=
+          duelTotalRounds
+        ) {
+          finishDuel();
+        } else {
+          renderDuelRound();
+        }
 
-    },
-    1200
-  );
+      },
+      1800
+    );
+
+  }
 }
 
 function updateDuelStatsUI() {
@@ -2990,8 +2616,9 @@ function finishDuel() {
 
   duelActive = false;
 
-  clearInterval(duelRound.a.timer);
-  clearInterval(duelRound.b.timer);
+  clearInterval(
+    duelTimer
+  );
 
   const modal =
     $("duelModal");
@@ -3175,8 +2802,9 @@ function exitDuel() {
 
   duelActive = false;
 
-  clearInterval(duelRound.a.timer);
-  clearInterval(duelRound.b.timer);
+  clearInterval(
+    duelTimer
+  );
 
   const modal =
     $("duelModal");
@@ -4405,8 +4033,6 @@ async function persistHistory() {
   const key =
     getGameHistoryLSKey();
 
-  gameHistory = [];
-
   localStorage.setItem(
     key,
     JSON.stringify(
@@ -4417,7 +4043,7 @@ async function persistHistory() {
   const ref =
     getUserDocRef();
 
-  if (!ref || HISTORY_DISABLED || !navigator.onLine) return;
+  if (!ref) return;
 
   try {
     await setDoc(
@@ -4433,75 +4059,9 @@ async function persistHistory() {
   }
 }
 
-async function clearGameHistoryAndDisableStorage() {
-  gameHistory = [];
-
-  const key =
-    getGameHistoryLSKey();
-
-  localStorage.setItem(
-    key,
-    JSON.stringify([])
-  );
-
-  await saveParticipants();
-
-  const ref =
-    getUserDocRef();
-
-  if (ref && navigator.onLine) {
-    try {
-      await setDoc(
-        ref,
-        { gameHistory: [] },
-        { merge: true }
-      );
-    } catch (e) {
-      console.warn(
-        "history clear:",
-        e
-      );
-    }
-  }
-
-  renderGameHistory();
-  renderParticipants();
-}
-
-window.clearGameHistoryAndDisableStorage =
-  clearGameHistoryAndDisableStorage;
-
 async function saveGameResult(
   sortedTeams
 ) {
-  if (HISTORY_DISABLED) {
-    return {
-      id:
-        "game_" +
-        Date.now(),
-      date:
-        new Date().toISOString(),
-      teams:
-        sortedTeams.map(
-          t => ({
-            id: t.id,
-            participantId:
-              t.participantId ||
-              null,
-            name: t.name,
-            score: t.score,
-            image:
-              t.image || "",
-            correctCount:
-              t.correctCount || 0,
-            wrongCount:
-              t.wrongCount || 0
-          })
-        ),
-      synced: true
-    };
-  }
-
   const result = {
     id:
       "game_" +
@@ -4604,18 +4164,6 @@ async function updateParticipantsStats(
 }
 
 function recalculateStatsFromHistory() {
-  if (
-    HISTORY_DISABLED ||
-    !Array.isArray(gameHistory) ||
-    !gameHistory.length
-  ) {
-    if (Array.isArray(participants) && participants.length) {
-      saveParticipants();
-      renderParticipants();
-    }
-    return;
-  }
-
   const byId = {};
 
   gameHistory.forEach(
@@ -4824,16 +4372,6 @@ function renderGameHistory() {
 
   box.innerHTML = "";
 
-  if (HISTORY_DISABLED) {
-    box.innerHTML = `
-      <div class="historyItem emptyHistory">
-        <strong>O‘yin tarixi o‘chirilgan</strong>
-        <span class="date">Mavjud emas</span>
-      </div>
-    `;
-    return;
-  }
-
   [
     ...gameHistory
   ]
@@ -4927,6 +4465,8 @@ function renderGameHistory() {
             await persistHistory();
 
             renderGameHistory();
+
+            recalculateStatsFromHistory();
           };
 
         div.appendChild(
@@ -5412,32 +4952,15 @@ async function shuffleTopicQuestions() {
   }
 
   /*
-   * MUHIM TUZATISH: savollarni
-   * "shuffled" degan yangi kalitga
-   * emas, balki 0-4 ustunlarga qaytadan
-   * (aralashtirilgan tartibda) taqsimlab
-   * saqlaymiz — aks holda boshqa joylarda
-   * (masalan Excel eksport, board render)
-   * ishlatiladigan 0-4 formatidan
-   * uzilib qolib, keyingi saqlashlarda
-   * savollar "yo'qolib qolgandek"
-   * ko'rinar edi.
+   * Muhim:
+   * 5 ta ustunga bo‘lmaymiz.
+   *
+   * Bitta massiv sifatida
+   * saqlaymiz.
    */
-  const reshuffled = {
-    0: [],
-    1: [],
-    2: [],
-    3: [],
-    4: []
+  topic.questions = {
+    shuffled: allQuestions
   };
-
-  allQuestions.forEach(
-    (item, i) => {
-      reshuffled[i % 5].push(item);
-    }
-  );
-
-  topic.questions = reshuffled;
 
   currentTopicQuestions =
     allQuestions;
@@ -5845,8 +5368,6 @@ onAuthStateChanged(
       "uid",
       currentUserUid
     );
-
-    await migrateLocalDataToFirebase();
 
     await loadParticipants();
 
