@@ -182,13 +182,31 @@ async function saveParticipants() {
   if (!ref) return;
 
   try {
+
+    /*
+     * Firestore "undefined"
+     * qiymatlarni qabul qilmaydi
+     * va bunda shovqinsiz xatolik
+     * berib, statistika (wins/games)
+     * saqlanmay qolishi mumkin edi.
+     */
+    const safeParticipants =
+      JSON.parse(
+        JSON.stringify(
+          participants
+        )
+      );
+
     await setDoc(
       ref,
-      { participants },
+      { participants: safeParticipants },
       { merge: true }
     );
   } catch (e) {
-    console.warn("Participant Firebase save:", e);
+    console.error(
+      "Participant Firebase save XATOSI:",
+      e
+    );
   }
 }
 
@@ -4397,26 +4415,48 @@ async function declareWinner() {
         b.score - a.score
     );
 
+  /*
+   * MUHIM TUZATISH: ishtirokchi
+   * statistikasi (g'alaba/o'yin
+   * soni) avval tarix saqlashga
+   * ("saveGameResult") qattiq
+   * bog'liq edi — agar tarix
+   * saqlashda birror xatolik
+   * chiqsa (tarmoq va h.k.),
+   * statistika UMUMAN
+   * yangilanmay qolar edi. Endi
+   * ikkalasi bir-biridan mustaqil,
+   * shu sabab statistika har doim
+   * yangilanadi, hatto tarix
+   * saqlanmasa ham.
+   */
   try {
     await saveGameResult(
       sorted
     );
 
-    await updateParticipantsStats(
-      sorted
-    );
-
     renderGameHistory();
+  } catch (e) {
+    console.error(
+      "Game history save error:",
+      e
+    );
+  }
 
-    showWinnerModal(
+  try {
+    await updateParticipantsStats(
       sorted
     );
   } catch (e) {
     console.error(
-      "Winner save error:",
+      "Participant stats update error:",
       e
     );
   }
+
+  showWinnerModal(
+    sorted
+  );
 }
 
 function showSoloResultModal() {
