@@ -1625,14 +1625,28 @@ select option{background:#101c31;color:#fff}
   .gameStage{grid-template-columns:minmax(0,1fr) 280px}
 }
 @media(max-width:820px){
-  .gameStage{grid-template-columns:1fr}
-  .liveParticipantsPanel{min-height:0}
-  .liveParticipantsPanel .participantsBox{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-height:310px}
+  .gameStage{grid-template-columns:minmax(0,1fr) minmax(96px,30%)}
+  .liveParticipantsPanel{min-height:0;padding:10px}
+  .liveParticipantsPanel .panelHead{flex-direction:column;align-items:flex-start;gap:8px}
+  .liveParticipantsPanel .panelHead .bigBtn{font-size:11px;padding:8px 10px}
+  .liveParticipantsPanel .participantsBox{display:flex;flex-direction:column;max-height:none}
+  .liveParticipantsPanel .participant{
+    grid-template-columns:1fr;
+    grid-template-areas:"rank" "avatar" "info" "actions";
+    justify-items:center;
+    text-align:center;
+    min-height:0;
+    gap:4px;
+  }
+  .liveParticipantsPanel .participantRank{grid-area:rank}
+  .participantAvatarWrap{grid-area:avatar}
+  .participantInfo{grid-area:info;width:100%}
+  .liveParticipantsPanel .participantActions{grid-area:actions;flex-direction:row}
+  .liveParticipantsPanel .participantName{white-space:normal;font-size:11px}
   .answerOptions{grid-template-columns:1fr}
 }
 @media(max-width:520px){
-  .liveParticipantsPanel .participantsBox{grid-template-columns:1fr}
-  .liveParticipantsPanel .participant{grid-template-columns:28px 46px minmax(0,1fr) auto}
+  .liveParticipantsPanel .participant{grid-template-columns:1fr}
   .winnerHero{flex-direction:column;text-align:center}
   .winnerAvatar{width:90px;height:90px}
 }
@@ -3480,9 +3494,10 @@ select option{background:#101c31;color:#fff}
   /* ---------- BOARD + LEADERBOARD STACK ---------- */
 
   .gameStage{
-    display:flex;
-    flex-direction:column;
-    gap:16px;
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr) minmax(90px,28%) !important;
+    gap:10px !important;
+    align-items:stretch;
   }
 
   .topicBoardCard{
@@ -3741,14 +3756,20 @@ select option{background:#101c31;color:#fff}
 
 .duelModal{
   padding:0;
-  background:#04070d;
+  background:transparent;
 }
 
 .duelArena{
-  width:100%;
-  height:100%;
+  width:min(1280px, 96vw);
+  height:auto;
+  max-height:84vh;
   display:flex;
   flex-direction:row;
+  align-items:stretch;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:24px;
+  background:#04070d;
 }
 
 .duelSide{
@@ -3759,7 +3780,7 @@ select option{background:#101c31;color:#fff}
   flex-direction:column;
   justify-content:center;
 
-  padding:22px 34px;
+  padding:24px 28px 20px;
   overflow:auto;
 
   background:
@@ -3824,13 +3845,14 @@ select option{background:#101c31;color:#fff}
 
 .duelAnswerOptions{
   display:grid;
-  grid-template-columns:1fr;
-  gap:14px;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:12px;
+  width:100%;
 }
 
 .duelAnswerBtn{
-  min-height:64px;
-  font-size:19px !important;
+  min-height:68px;
+  font-size:18px !important;
 }
 
 .duelCenter{
@@ -3841,10 +3863,10 @@ select option{background:#101c31;color:#fff}
   flex-direction:column;
   align-items:center;
   justify-content:center;
-  gap:18px;
+  gap:14px;
 
-  width:96px;
-  padding:56px 8px 16px;
+  width:200px;
+  padding:42px 16px 18px;
 
   background:#04070d;
   border-left:1px solid rgba(255,255,255,.06);
@@ -3857,6 +3879,7 @@ select option{background:#101c31;color:#fff}
   font-weight:950;
   letter-spacing:.5px;
   text-align:center;
+  white-space:nowrap;
 }
 
 .duelTimerRing{
@@ -3877,54 +3900,83 @@ select option{background:#101c31;color:#fff}
 /* ==========================================================
    DUEL PROGRESS "YO'L"I — kim yutayotganini
    ko'k rang bilan to'lib boruvchi chiziq bilan
-   ko'rsatib turadi
+   ko'rsatib turadi.
+
+   Ekran GORIZONTAL (planshet/TV/kompyuter) bo'lgani
+   uchun, "yo'l" ham gorizontal ko'rinishda: chapga
+   (A) yoki o'ngga (B) tomon to'ladi, ikkala uchida
+   ham 🏁 marra belgisi turadi.
 ========================================================== */
 
 .duelProgressTrack{
   position:relative;
-  flex:1 1 auto;
+  flex:0 0 auto;
 
-  width:10px;
-  min-height:70px;
+  width:min(100%, 420px);
+  height:12px;
+  min-height:0;
 
   border-radius:999px;
   background:rgba(255,255,255,.08);
-  overflow:hidden;
+  overflow:visible;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);
+}
+
+.duelProgressTrack::before,
+.duelProgressTrack::after{
+  content:"🏁";
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  font-size:14px;
+  line-height:1;
+}
+
+.duelProgressTrack::before{
+  left:-18px;
+}
+
+.duelProgressTrack::after{
+  right:-18px;
 }
 
 .duelProgressMid{
   position:absolute;
-  left:-4px;
-  right:-4px;
-  top:50%;
+  top:-4px;
+  bottom:-4px;
+  left:50%;
 
-  height:2px;
+  width:2px;
   background:rgba(255,255,255,.28);
-  transform:translateY(-50%);
+  transform:translateX(-50%);
 }
 
 .duelProgressFillA,
 .duelProgressFillB{
   position:absolute;
-  left:0 !important;
-  right:0 !important;
+  top:0 !important;
+  bottom:0 !important;
+  height:100% !important;
 
-  height:0%;
+  width:0%;
 
-  background:linear-gradient(180deg,#20d9ff,#0891c9);
+  background:linear-gradient(90deg,#0891c9,#20d9ff);
   box-shadow:0 0 10px rgba(32,217,255,.5);
 
   border-radius:999px;
 
-  transition:height .35s ease, width .35s ease;
+  transition:width .35s ease;
 }
 
 .duelProgressFillA{
-  top:50%;
+  left:50% !important;
+  right:auto !important;
 }
 
 .duelProgressFillB{
-  bottom:50%;
+  right:50% !important;
+  left:auto !important;
+  background:linear-gradient(270deg,#0891c9,#20d9ff);
 }
 
 .duelVs{
@@ -3932,7 +3984,6 @@ select option{background:#101c31;color:#fff}
   font-size:13px;
   font-weight:950;
   letter-spacing:2px;
-  writing-mode:vertical-rl;
 }
 
 .duelExitBtn{
@@ -4105,32 +4156,35 @@ select option{background:#101c31;color:#fff}
     flex:0 0 auto;
   }
 
+  .duelProgressTrack::before,
+  .duelProgressTrack::after{
+    font-size:11px;
+  }
+
+  .duelProgressTrack::before{
+    left:-14px;
+  }
+
+  .duelProgressTrack::after{
+    right:-14px;
+  }
+
   .duelProgressMid{
     left:50%;
-    right:auto;
     top:-4px;
     bottom:-4px;
     width:2px;
-    height:auto;
     transform:translateX(-50%);
   }
 
-  .duelProgressFillA,
-  .duelProgressFillB{
-    left:auto !important;
-    right:auto !important;
-    top:0 !important;
-    bottom:0 !important;
-    height:auto !important;
-    width:0%;
-  }
-
   .duelProgressFillA{
-    left:50% !important;
+    right:50% !important;
+    left:auto !important;
   }
 
   .duelProgressFillB{
-    right:50% !important;
+    left:50% !important;
+    right:auto !important;
   }
 
   .duelVs{

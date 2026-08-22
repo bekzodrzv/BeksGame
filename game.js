@@ -17,6 +17,7 @@ let teamCount = 0;
 let teamsData = [];
 let gameInProgress = false;
 let gameHistory = [];
+const HISTORY_DISABLED = true;
 let userTimer = 10;
 let timer = null;
 let timeLeft = 0;
@@ -55,10 +56,15 @@ let soloStats = {
  * ===============================================
  */
 let duelActive = false;
-let duelPool = [];
-let duelRoundIndex = 0;
+
+/*
+ * Har bir tomon (A va B) endi mavzudagi
+ * BARCHA savollarni oladi (o'zining alohida
+ * aralashtirilgan nusxasida) va bir-biriga
+ * bog'liq bo'lmagan holda, o'z tezligida
+ * ishlaydi — biri ikkinchisini kutmaydi.
+ */
 let duelTotalRounds = 0;
-let duelTimer = null;
 let duelTimeLeft = 0;
 
 let duelPlayers = {
@@ -67,8 +73,28 @@ let duelPlayers = {
 };
 
 let duelRound = {
-  a: { item: null, correct: "", answered: false, startedAt: 0 },
-  b: { item: null, correct: "", answered: false, startedAt: 0 }
+  a: {
+    pool: [],
+    index: 0,
+    item: null,
+    correct: "",
+    answered: false,
+    finished: false,
+    startedAt: 0,
+    timer: null,
+    timeLeft: 0
+  },
+  b: {
+    pool: [],
+    index: 0,
+    item: null,
+    correct: "",
+    answered: false,
+    finished: false,
+    startedAt: 0,
+    timer: null,
+    timeLeft: 0
+  }
 };
 
 let duelStats = {
@@ -1113,25 +1139,132 @@ function questionsObjectToArray(obj) {
   );
 }
 
+function normalizeTopicQuestionsForStorage(source) {
+  const normalized = {
+    0: [],
+    1: [],
+    2: [],
+    3: [],
+    4: []
+  };
+
+  const safeSource =
+    Array.isArray(source)
+      ? source
+      : questionsObjectToArray(
+          source
+        );
+
+  safeSource.forEach(
+    (category, index) => {
+      const list =
+        Array.isArray(category)
+          ? category
+          : [];
+
+      normalized[index] =
+        list.map(item => {
+          if (!item || typeof item !== "object") {
+            return item;
+          }
+
+          return {
+            ...item,
+            wrongAnswers:
+              Array.isArray(item.wrongAnswers)
+                ? item.wrongAnswers.map(value =>
+                    String(value ?? "").trim()
+                  )
+                : []
+          };
+        });
+    }
+  );
+
+  return normalized;
+}
+
+function syncCurrentTopicQuestionsToUserTopics() {
+  if (!currentUserTopicId) {
+    return;
+  }
+
+  const topic =
+    userTopics.find(
+      t => t.id === currentUserTopicId
+    );
+
+  if (!topic) {
+    return;
+  }
+
+  const source =
+    Array.isArray(questions)
+      ? questions
+      : questionsObjectToArray(
+          questions
+        );
+
+  const normalized =
+    normalizeTopicQuestionsForStorage(
+      source
+    );
+
+  topic.questions = normalized;
+  currentTopicQuestions =
+    Object.values(normalized).flat();
+}
+
 async function saveTopics() {
+  syncCurrentTopicQuestionsToUserTopics();
+
   localStorage.setItem(
     getUserTopicsLSKey(),
     JSON.stringify(userTopics)
   );
 
-  const ref =
-    getUserDocRef();
+  const ref = getUserDocRef();
 
-  if (!ref) return;
+  if (!ref || !navigator.onLine) {
+    console.warn(
+      "saveTopics: Firestore skip (offline or no auth)."
+    );
+    return false;
+  }
 
   try {
+    const safeTopics = JSON.parse(
+      JSON.stringify(userTopics)
+    ).map(topic => ({
+      ...topic,
+      questions: normalizeTopicQuestionsForStorage(
+        topic.questions
+      )
+    }));
+
     await setDoc(
       ref,
-      { topics: userTopics },
+      { topics: safeTopics },
       { merge: true }
     );
+    return true;
   } catch (e) {
-    console.warn(e);
+    console.error(
+      "saveTopics Firebase xatosi:",
+      e
+    );
+
+    alert(
+      "DIQQAT: savollar Firebase'ga saqlanmadi!\n\n" +
+      "Xatolik: " + (e?.message || e) + "\n\n" +
+      "Ehtimoliy sabab: mavzudagi savollar juda ko'p " +
+      "bo'lib, Firestore hujjat hajmi chegarasidan " +
+      "(taxminan 1MB) oshib ketgan bo'lishi mumkin. " +
+      "Bu holatda ba'zi savollarni alohida mavzularga " +
+      "bo'lib saqlash tavsiya etiladi."
+    );
+
+    return false;
   }
 }
 
@@ -1565,11 +1698,21 @@ async function importExcelForUserTopic() {
       renderUserTopics();
       renderBoard();
 
-      await saveTopics();
+      const saved =
+        await saveTopics();
 
-      alert(
-        "Excel muvaffaqiyatli yuklandi!"
-      );
+      if (saved) {
+        alert(
+          "Excel muvaffaqiyatli yuklandi va saqlandi!"
+        );
+      } else {
+        alert(
+          "Excel yuklandi, lekin Firebase'ga saqlashda muammo bo'ldi " +
+          "(yuqoridagi xabarga qarang). Savollar shu qurilmada " +
+          "(localStorage) saqlandi, lekin boshqa qurilmada yoki " +
+          "sahifa keshi tozalansa yo'qolishi mumkin."
+        );
+      }
     };
 
   reader.readAsArrayBuffer(
@@ -2003,24 +2146,39 @@ function startDuel(topic, playerA, playerB) {
     return;
   }
 
-  pool = shuffleArray(pool);
-
   /*
-   * Ikki tomonga BIR XIL savol
-   * tushib qolmasligi uchun,
-   * pool'ni ikkiga bo'lib,
-   * har biriga alohida navbat
-   * beramiz (A: juft, B: toq).
+   * Har ikkala tomon ham mavzudagi
+   * BARCHA savollarni oladi — lekin
+   * har biri o'zining mustaqil
+   * aralashtirilgan tartibida, shu
+   * sabab ular bir xil vaqtda bir xil
+   * savolga duch kelmaydi.
    */
-  duelPool = pool;
+  duelTotalRounds = pool.length;
 
-  duelTotalRounds =
-    Math.max(
-      1,
-      Math.floor(pool.length / 2)
-    );
+  duelRound.a = {
+    pool: shuffleArray(pool.slice()),
+    index: 0,
+    item: null,
+    correct: "",
+    answered: false,
+    finished: false,
+    startedAt: 0,
+    timer: null,
+    timeLeft: 0
+  };
 
-  duelRoundIndex = 0;
+  duelRound.b = {
+    pool: shuffleArray(pool.slice()),
+    index: 0,
+    item: null,
+    correct: "",
+    answered: false,
+    finished: false,
+    startedAt: 0,
+    timer: null,
+    timeLeft: 0
+  };
 
   duelPlayers = {
     a: playerA || teamsData[0],
@@ -2086,62 +2244,89 @@ function startDuel(topic, playerA, playerB) {
       "flex";
   }
 
-  renderDuelRound();
+  renderDuelSideRound("a");
+  renderDuelSideRound("b");
+
+  updateDuelRoundLabel();
 }
 
-function renderDuelRound() {
+function updateDuelRoundLabel() {
+
+  const label =
+    $("duelRoundNow");
+
+  if (!label) return;
+
+  /*
+   * Ikkala tomon mustaqil
+   * ravishda ilgarilagani uchun,
+   * har birining o'z progressi
+   * alohida ko'rsatiladi.
+   */
+  const aNow =
+    Math.min(
+      duelRound.a.index + 1,
+      duelTotalRounds
+    );
+
+  const bNow =
+    Math.min(
+      duelRound.b.index + 1,
+      duelTotalRounds
+    );
+
+  label.textContent =
+    "A " + aNow + "/" + duelTotalRounds +
+    "   •   B " + bNow + "/" + duelTotalRounds;
+}
+
+function renderDuelSideRound(side) {
 
   if (!duelActive) return;
 
-  const itemA =
-    duelPool[
-      duelRoundIndex * 2
-    ];
+  const state =
+    duelRound[side];
 
-  const itemB =
-    duelPool[
-      duelRoundIndex * 2 + 1
-    ];
+  if (state.finished) return;
 
-  if (!itemA || !itemB) {
-    finishDuel();
+  const item =
+    state.pool[state.index];
+
+  if (!item) {
+    state.finished = true;
+    checkDuelBothFinished();
     return;
   }
 
-  duelRound = {
-    a: {
-      item: itemA,
-      correct: String(
-        itemA.a ??
-        itemA.answer ??
-        ""
-      ).trim(),
-      answered: false,
-      startedAt: Date.now()
-    },
-    b: {
-      item: itemB,
-      correct: String(
-        itemB.a ??
-        itemB.answer ??
-        ""
-      ).trim(),
-      answered: false,
-      startedAt: Date.now()
-    }
-  };
+  state.item = item;
 
-  if ($("duelRoundNow")) {
-    $("duelRoundNow").textContent =
-      duelRoundIndex + 1;
-  }
+  state.correct =
+    String(
+      item.a ??
+      item.answer ??
+      ""
+    ).trim();
 
-  renderDuelSide("a", itemA);
-  renderDuelSide("b", itemB);
+  state.answered = false;
+  state.startedAt = Date.now();
+
+  renderDuelSide(side, item);
+
+  updateDuelRoundLabel();
 
   updateDuelStatsUI();
 
-  startDuelRoundTimer();
+  startDuelRoundTimer(side);
+}
+
+function checkDuelBothFinished() {
+
+  if (
+    duelRound.a.finished &&
+    duelRound.b.finished
+  ) {
+    finishDuel();
+  }
 }
 
 function renderDuelSide(side, item) {
@@ -2222,64 +2407,64 @@ function renderDuelSide(side, item) {
   );
 }
 
-function startDuelRoundTimer() {
+function startDuelRoundTimer(side) {
+
+  const state =
+    duelRound[side];
 
   clearInterval(
-    duelTimer
+    state.timer
   );
 
-  duelTimeLeft =
+  state.timeLeft =
     userTimer || 10;
 
   const el =
-    $("duelTimer");
+    $(
+      side === "a"
+        ? "duelATimer"
+        : "duelBTimer"
+    );
 
   if (el) {
     el.textContent =
-      duelTimeLeft;
+      state.timeLeft;
   }
 
-  duelTimer = setInterval(
+  state.timer = setInterval(
     () => {
 
-      duelTimeLeft--;
+      state.timeLeft--;
 
       if (el) {
         el.textContent =
           Math.max(
             0,
-            duelTimeLeft
+            state.timeLeft
           );
       }
 
-      if (duelTimeLeft <= 0) {
+      if (state.timeLeft <= 0) {
 
         clearInterval(
-          duelTimer
+          state.timer
         );
 
         /*
-         * Vaqt tugasa, javob
-         * bermagan tomon(lar)
-         * avtomatik xato deb
-         * hisoblanadi.
+         * Vaqt tugasa, shu
+         * tomon javob bermagan
+         * bo'lsa avtomatik xato
+         * deb hisoblanadi — bu
+         * boshqa tomonga ta'sir
+         * qilmaydi.
          */
-        ["a", "b"].forEach(
-          side => {
-
-            if (
-              !duelRound[side]
-                .answered
-            ) {
-              resolveDuelSide(
-                side,
-                false,
-                true
-              );
-            }
-
-          }
-        );
+        if (!state.answered) {
+          resolveDuelSide(
+            side,
+            false,
+            true
+          );
+        }
 
       }
 
@@ -2425,39 +2610,36 @@ function resolveDuelSide(
   updateDuelStatsUI();
 
   /*
-   * Ikkala tomon ham javob
-   * berdimi? Berilgan bo'lsa,
-   * qisqa pauzadan so'ng
-   * keyingi raundga o'tamiz.
+   * Har bir tomon o'z javobidan
+   * so'ng, IKKINCHI TOMONNI
+   * KUTMASDAN, qisqa pauzadan
+   * keyin darhol o'zining
+   * navbatdagi savoliga o'tadi.
    */
-  if (
-    duelRound.a.answered &&
-    duelRound.b.answered
-  ) {
+  clearInterval(
+    duelRound[side].timer
+  );
 
-    clearInterval(
-      duelTimer
-    );
+  setTimeout(
+    () => {
 
-    setTimeout(
-      () => {
+      if (!duelActive) return;
 
-        duelRoundIndex++;
+      duelRound[side].index++;
 
-        if (
-          duelRoundIndex >=
-          duelTotalRounds
-        ) {
-          finishDuel();
-        } else {
-          renderDuelRound();
-        }
+      if (
+        duelRound[side].index >=
+        duelRound[side].pool.length
+      ) {
+        duelRound[side].finished = true;
+        checkDuelBothFinished();
+      } else {
+        renderDuelSideRound(side);
+      }
 
-      },
-      1800
-    );
-
-  }
+    },
+    1200
+  );
 }
 
 function updateDuelStatsUI() {
@@ -2555,9 +2737,8 @@ function finishDuel() {
 
   duelActive = false;
 
-  clearInterval(
-    duelTimer
-  );
+  clearInterval(duelRound.a.timer);
+  clearInterval(duelRound.b.timer);
 
   const modal =
     $("duelModal");
@@ -2741,9 +2922,8 @@ function exitDuel() {
 
   duelActive = false;
 
-  clearInterval(
-    duelTimer
-  );
+  clearInterval(duelRound.a.timer);
+  clearInterval(duelRound.b.timer);
 
   const modal =
     $("duelModal");
@@ -3972,6 +4152,8 @@ async function persistHistory() {
   const key =
     getGameHistoryLSKey();
 
+  gameHistory = [];
+
   localStorage.setItem(
     key,
     JSON.stringify(
@@ -3982,7 +4164,7 @@ async function persistHistory() {
   const ref =
     getUserDocRef();
 
-  if (!ref) return;
+  if (!ref || HISTORY_DISABLED || !navigator.onLine) return;
 
   try {
     await setDoc(
@@ -3998,9 +4180,72 @@ async function persistHistory() {
   }
 }
 
+async function clearGameHistoryAndDisableStorage() {
+  gameHistory = [];
+
+  const key =
+    getGameHistoryLSKey();
+
+  localStorage.setItem(
+    key,
+    JSON.stringify([])
+  );
+
+  const ref =
+    getUserDocRef();
+
+  if (ref && navigator.onLine) {
+    try {
+      await setDoc(
+        ref,
+        { gameHistory: [] },
+        { merge: true }
+      );
+    } catch (e) {
+      console.warn(
+        "history clear:",
+        e
+      );
+    }
+  }
+
+  renderGameHistory();
+}
+
+window.clearGameHistoryAndDisableStorage =
+  clearGameHistoryAndDisableStorage;
+
 async function saveGameResult(
   sortedTeams
 ) {
+  if (HISTORY_DISABLED) {
+    return {
+      id:
+        "game_" +
+        Date.now(),
+      date:
+        new Date().toISOString(),
+      teams:
+        sortedTeams.map(
+          t => ({
+            id: t.id,
+            participantId:
+              t.participantId ||
+              null,
+            name: t.name,
+            score: t.score,
+            image:
+              t.image || "",
+            correctCount:
+              t.correctCount || 0,
+            wrongCount:
+              t.wrongCount || 0
+          })
+        ),
+      synced: true
+    };
+  }
+
   const result = {
     id:
       "game_" +
@@ -4310,6 +4555,16 @@ function renderGameHistory() {
   if (!box) return;
 
   box.innerHTML = "";
+
+  if (HISTORY_DISABLED) {
+    box.innerHTML = `
+      <div class="historyItem emptyHistory">
+        <strong>O‘yin tarixi o‘chirilgan</strong>
+        <span class="date">Mavjud emas</span>
+      </div>
+    `;
+    return;
+  }
 
   [
     ...gameHistory
@@ -4891,15 +5146,32 @@ async function shuffleTopicQuestions() {
   }
 
   /*
-   * Muhim:
-   * 5 ta ustunga bo‘lmaymiz.
-   *
-   * Bitta massiv sifatida
-   * saqlaymiz.
+   * MUHIM TUZATISH: savollarni
+   * "shuffled" degan yangi kalitga
+   * emas, balki 0-4 ustunlarga qaytadan
+   * (aralashtirilgan tartibda) taqsimlab
+   * saqlaymiz — aks holda boshqa joylarda
+   * (masalan Excel eksport, board render)
+   * ishlatiladigan 0-4 formatidan
+   * uzilib qolib, keyingi saqlashlarda
+   * savollar "yo'qolib qolgandek"
+   * ko'rinar edi.
    */
-  topic.questions = {
-    shuffled: allQuestions
+  const reshuffled = {
+    0: [],
+    1: [],
+    2: [],
+    3: [],
+    4: []
   };
+
+  allQuestions.forEach(
+    (item, i) => {
+      reshuffled[i % 5].push(item);
+    }
+  );
+
+  topic.questions = reshuffled;
 
   currentTopicQuestions =
     allQuestions;
