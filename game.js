@@ -132,6 +132,42 @@ function getUserDocRef() {
   return currentUserUid && db ? doc(db, "users", currentUserUid) : null;
 }
 
+function normalizeParticipant(participant) {
+  return {
+    id: participant.id ?? "p_" + Date.now() + Math.random(),
+    name: String(participant.name ?? "Noma'lum"),
+    wins: Math.max(0, Number(participant.wins) || 0),
+    games: Math.max(0, Number(participant.games) || 0),
+    image: participant.image || ""
+  };
+}
+
+function mergeParticipantStats(localList, remoteList) {
+  const merged = new Map();
+
+  [...localList, ...remoteList].forEach(participant => {
+    const normalized = normalizeParticipant(participant);
+    const key = String(normalized.id) || normalizeName(normalized.name);
+    const existing = merged.get(key);
+
+    if (!existing) {
+      merged.set(key, normalized);
+      return;
+    }
+
+    merged.set(key, {
+      ...existing,
+      ...normalized,
+      name: normalized.name || existing.name,
+      wins: Math.max(existing.wins, normalized.wins),
+      games: Math.max(existing.games, normalized.games),
+      image: normalized.image || existing.image
+    });
+  });
+
+  return [...merged.values()];
+}
+
 /* ================= SETTINGS ================= */
 
 function initSettings() {
@@ -233,13 +269,7 @@ async function loadParticipants() {
     participants = [];
   }
 
-  participants = participants.map(p => ({
-    id: p.id ?? Date.now() + Math.random(),
-    name: String(p.name ?? "Noma'lum"),
-    wins: Number(p.wins) || 0,
-    games: Number(p.games) || 0,
-    image: p.image || ""
-  }));
+  participants = participants.map(normalizeParticipant);
 
   renderParticipants();
 
@@ -255,13 +285,10 @@ async function loadParticipants() {
       : null;
 
     if (Array.isArray(remote)) {
-      participants = remote.map(p => ({
-        id: p.id ?? Date.now() + Math.random(),
-        name: String(p.name ?? "Noma'lum"),
-        wins: Number(p.wins) || 0,
-        games: Number(p.games) || 0,
-        image: p.image || ""
-      }));
+      participants = mergeParticipantStats(
+        participants,
+        remote
+      );
 
       localStorage.setItem(
         PARTICIPANTS_KEY(),
@@ -4191,6 +4218,8 @@ async function clearGameHistoryAndDisableStorage() {
     JSON.stringify([])
   );
 
+  await saveParticipants();
+
   const ref =
     getUserDocRef();
 
@@ -4210,6 +4239,7 @@ async function clearGameHistoryAndDisableStorage() {
   }
 
   renderGameHistory();
+  renderParticipants();
 }
 
 window.clearGameHistoryAndDisableStorage =
@@ -4348,6 +4378,18 @@ async function updateParticipantsStats(
 }
 
 function recalculateStatsFromHistory() {
+  if (
+    HISTORY_DISABLED ||
+    !Array.isArray(gameHistory) ||
+    !gameHistory.length
+  ) {
+    if (Array.isArray(participants) && participants.length) {
+      saveParticipants();
+      renderParticipants();
+    }
+    return;
+  }
+
   const byId = {};
 
   gameHistory.forEach(
@@ -4659,8 +4701,6 @@ function renderGameHistory() {
             await persistHistory();
 
             renderGameHistory();
-
-            recalculateStatsFromHistory();
           };
 
         div.appendChild(

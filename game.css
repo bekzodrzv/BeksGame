@@ -3760,9 +3760,9 @@ select option{background:#101c31;color:#fff}
 }
 
 .duelArena{
-  width:min(1280px, 96vw);
+  width:min(1500px, 96vw);
   height:auto;
-  max-height:84vh;
+  max-height:88vh;
   display:flex;
   flex-direction:row;
   align-items:stretch;
@@ -3780,7 +3780,7 @@ select option{background:#101c31;color:#fff}
   flex-direction:column;
   justify-content:center;
 
-  padding:24px 28px 20px;
+  padding:22px 26px 18px;
   overflow:auto;
 
   background:
@@ -3834,10 +3834,10 @@ select option{background:#101c31;color:#fff}
 
 .duelQText{
   flex:0 0 auto;
-  margin:8px 0 20px;
+  margin:8px 0 18px;
 
   color:#f8fbff;
-  font-size:clamp(22px,2.6vw,34px);
+  font-size:clamp(22px,2.1vw,36px);
   line-height:1.28;
   font-weight:900;
   letter-spacing:-.5px;
@@ -3846,13 +3846,16 @@ select option{background:#101c31;color:#fff}
 .duelAnswerOptions{
   display:grid;
   grid-template-columns:repeat(2, minmax(0, 1fr));
-  gap:12px;
+  gap:12px 14px;
   width:100%;
+  align-items:stretch;
 }
 
 .duelAnswerBtn{
-  min-height:68px;
-  font-size:18px !important;
+  min-height:72px;
+  padding:14px 16px;
+  font-size:17px !important;
+  line-height:1.2;
 }
 
 .duelCenter{
@@ -3865,8 +3868,8 @@ select option{background:#101c31;color:#fff}
   justify-content:center;
   gap:14px;
 
-  width:200px;
-  padding:42px 16px 18px;
+  width:230px;
+  padding:38px 18px 18px;
 
   background:#04070d;
   border-left:1px solid rgba(255,255,255,.06);
@@ -3912,8 +3915,8 @@ select option{background:#101c31;color:#fff}
   position:relative;
   flex:0 0 auto;
 
-  width:min(100%, 420px);
-  height:12px;
+  width:min(100%, 520px);
+  height:14px;
   min-height:0;
 
   border-radius:999px;
