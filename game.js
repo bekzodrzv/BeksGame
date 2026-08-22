@@ -1,6 +1,6 @@
 import { auth, db } from "./firebase.js";
 import { signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { doc, setDoc, updateDoc, getDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { doc, setDoc, updateDoc, getDoc, getDocs, collection, writeBatch, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 /* =========================================================
    BEKS GAME — CLEAN GAME ENGINE
@@ -1179,6 +1179,26 @@ async function saveTopics() {
       { merge: true }
     );
 
+    /*
+     * TEZLIK UCHUN MUHIM O'ZGARISH:
+     * Avval "boshqalar mavzulari"ni
+     * ko'rsatish uchun BARCHA
+     * foydalanuvchilarning to'liq
+     * hujjati (participants,
+     * gameHistory bilan birga)
+     * yuklab olinar edi — shu
+     * sekinlikning asosiy sababi
+     * edi. Endi har bir mavzu
+     * alohida, yengil
+     * "sharedTopics/{id}" hujjatiga
+     * ham sinxronlanadi, shunda
+     * boshqalar faqat shu kichik
+     * kolleksiyani o'qiydi.
+     */
+    await syncSharedTopics(
+      safeTopics
+    );
+
   } catch (e) {
 
     console.error(
@@ -1191,6 +1211,96 @@ async function saveTopics() {
       "Sababi: " +
       (e?.message || e) +
       "\n\nInternetni tekshirib, qayta urinib ko‘ring."
+    );
+
+  }
+}
+
+async function syncSharedTopics(
+  topicsToSync
+) {
+
+  if (
+    !db ||
+    !currentUserUid
+  ) {
+    return;
+  }
+
+  const list =
+    topicsToSync ||
+    JSON.parse(
+      JSON.stringify(
+        userTopics
+      )
+    );
+
+  if (!list.length) return;
+
+  try {
+
+    const batch =
+      writeBatch(db);
+
+    const ownerName =
+      auth.currentUser
+        ?.displayName ||
+      "Noma'lum";
+
+    list.forEach(t => {
+
+      if (!t.id) return;
+
+      batch.set(
+        doc(
+          db,
+          "sharedTopics",
+          t.id
+        ),
+        {
+          ...t,
+          ownerId:
+            currentUserUid,
+          ownerName
+        },
+        { merge: true }
+      );
+
+    });
+
+    await batch.commit();
+
+  } catch (e) {
+
+    console.warn(
+      "sharedTopics sync:",
+      e
+    );
+
+  }
+}
+
+async function deleteSharedTopic(
+  topicId
+) {
+
+  if (!db || !topicId) return;
+
+  try {
+
+    await deleteDoc(
+      doc(
+        db,
+        "sharedTopics",
+        topicId
+      )
+    );
+
+  } catch (e) {
+
+    console.warn(
+      "sharedTopics delete:",
+      e
     );
 
   }
@@ -1410,6 +1520,18 @@ async function deleteUserTopic(
   renderUserTopics();
 
   await saveTopics();
+
+  /*
+   * Mavzu o'chirilganda,
+   * ulashilgan nusxasi ham
+   * "sharedTopics" kolleksiyasidan
+   * o'chirilishi kerak — aks
+   * holda boshqalarga hali ham
+   * ko'rinaveradi.
+   */
+  await deleteSharedTopic(
+    topicId
+  );
 }
 
 window.deleteUserTopic =
@@ -5005,43 +5127,46 @@ async function loadOtherTopics() {
   try {
     otherTopics = [];
 
+    /*
+     * TEZLASHTIRISH: avval BARCHA
+     * foydalanuvchilarning to'liq
+     * hujjati (har birining
+     * participants+gameHistory
+     * bilan birga) yuklanardi —
+     * bu foydalanuvchilar ko'paygan
+     * sari doimiy sekinlashib
+     * borar edi. Endi faqat
+     * yengil "sharedTopics"
+     * kolleksiyasi o'qiladi —
+     * har bir hujjatda faqat
+     * bitta mavzu bor, boshqa
+     * hech narsa yo'q.
+     */
     const snap =
       await getDocs(
         collection(
           db,
-          "users"
+          "sharedTopics"
         )
       );
 
     snap.docs.forEach(
       d => {
+        const data =
+          d.data();
+
         if (
-          d.id ===
+          data.ownerId ===
           currentUserUid
         ) {
           return;
         }
 
-        const data =
-          d.data();
-
-        if (
-          Array.isArray(
-            data.topics
-          )
-        ) {
-          data.topics.forEach(
-            t =>
-              otherTopics.push({
-                ...t,
-                ownerId:
-                  d.id,
-                ownerName:
-                  data.displayName ||
-                  "Noma'lum"
-              })
-          );
-        }
+        otherTopics.push({
+          ...data,
+          id:
+            data.id || d.id
+        });
       }
     );
 
@@ -5384,6 +5509,17 @@ onAuthStateChanged(
     renderTeams();
 
     await loadOtherTopics();
+
+    /*
+     * Eski usulda saqlangan
+     * mavzularni ("users" hujjati
+     * ichida) yangi, tez ishlaydigan
+     * "sharedTopics" kolleksiyasiga
+     * fonda ko'chirib qo'yamiz —
+     * UI'ni kutdirmaslik uchun
+     * await qilinmaydi.
+     */
+    syncSharedTopics();
   }
 );
 
