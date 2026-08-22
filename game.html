@@ -24,6 +24,7 @@
     </div>
 
     <div class="headerActions">
+      <button class="topBtn" id="teacherLockBtn" title="Boshqaruvni qulflash/ochish">🔒</button>
       <button class="topBtn" id="accountBtn">👤 Profil</button>
       <button class="topBtn dangerBtn" id="logoutBtn">↪ Chiqish</button>
     </div>
@@ -45,9 +46,39 @@
       <label for="displayNameInput">Ism</label>
       <input type="text" id="displayNameInput" placeholder="Ismingiz">
 
+      <label for="teacherPinInput" class="teacherPinLabel">🔒 Boshqaruv PIN kodi (o‘quvchilarga aytmang)</label>
+      <input type="password" id="teacherPinInput" inputmode="numeric" maxlength="8" placeholder="Yangi PIN kod (kamida 4 ta belgi)">
+      <button class="bigBtn secondaryBtn wideBtn" id="savePinBtn" type="button">PIN kodni saqlash</button>
+
       <div class="modalActions">
         <button class="bigBtn secondaryBtn" onclick="closeAccountModal()">Yopish</button>
         <button class="bigBtn primaryBtn" id="saveProfileBtn">Saqlash</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================
+       TEACHER LOCK MODAL
+  ========================== -->
+  <div class="modal" id="teacherLockModal">
+    <div class="modal-box teacherLockBox">
+      <div class="modalHeader">
+        <div>
+          <span class="eyebrow">TEACHER LOCK</span>
+          <h2 id="teacherLockTitle">Boshqaruvni ochish</h2>
+        </div>
+        <button class="iconBtn" onclick="closeTeacherLockModal()">×</button>
+      </div>
+
+      <p class="teacherLockHint" id="teacherLockHint">
+        Boshqaruv funksiyalarini (mavzu/ishtirokchi o‘chirish, sozlamalar) ochish uchun PIN kodni kiriting.
+      </p>
+
+      <input type="password" id="teacherLockPinInput" inputmode="numeric" maxlength="8" placeholder="PIN kod" class="teacherLockPinInput">
+
+      <div class="modalActions">
+        <button class="bigBtn secondaryBtn" onclick="closeTeacherLockModal()">Bekor qilish</button>
+        <button class="bigBtn primaryBtn" id="teacherLockSubmitBtn">Ochish</button>
       </div>
     </div>
   </div>
@@ -152,7 +183,13 @@
                 <input type="number" id="pointStepInput" value="100" min="1">
               </div>
 
-              
+              <div class="field compactField">
+                <label for="pointModeSelect">REJIM</label>
+                <select id="pointModeSelect">
+                  <option value="fixed">Bir xil</option>
+                  <option value="progressive">100-200-300</option>
+                </select>
+              </div>
 
               <button class="smallBtn" onclick="updatePointSettings()">Saqlash</button>
             </div>
@@ -169,7 +206,7 @@
             <span class="toolTitle">⏱ Savol vaqti</span>
             <div class="toolRow">
               <input type="number" id="timerInput" min="1" max="300" value="10">
-              <span class="unit"></span>
+              <span class="unit">sekund</span>
               <button class="smallBtn" onclick="updateTimer()">O‘zgartirish</button>
             </div>
           </div>
@@ -187,6 +224,9 @@
           <button class="bigBtn primaryBtn wideBtn" onclick="addParticipant()">
             🧑 Ishtirokchi qo‘shish
           </button>
+          <button class="smallBtn resetAllStatsBtn" onclick="resetAllParticipantsStats()" title="Barcha ishtirokchilar statistikasini 0 ga tushirish">
+            🔄 Statistikani tozalash
+          </button>
         </div>
         <div id="participantsBox" class="participantsBox"></div>
       </aside>
@@ -202,7 +242,13 @@
     ========================== -->
     <section class="panel topicLibrary">
 
-      
+      <div class="panelHead topicMainHead">
+        <div>
+          <span class="eyebrow">QUESTION LIBRARY</span>
+          <h2>Mavzular</h2>
+          <p class="panelDescription">Boshqa foydalanuvchilar ulashgan mavzuni tanlang.</p>
+        </div>
+      </div>
 
       <!-- OTHER TOPICS -->
       <div class="topicBlock">
@@ -307,7 +353,7 @@
             <span id="duelBName"></span>
           </div>
           <div class="duelPlayerScore">
-            ✅ <span id="duelBCorrect">0</span>&nbsp;&nbsp;❌ <span id="duelBWrong">0</span>&nbsp;&nbsp;⏱ <span id="duelBTimer">10</span>
+            ✅ <span id="duelBCorrect">0</span>&nbsp;&nbsp;❌ <span id="duelBWrong">0</span>
           </div>
         </div>
         <div class="duelQText" id="duelBQText"></div>
@@ -319,7 +365,7 @@
         <div class="duelRoundLabel">
           RAUND <span id="duelRoundNow">1</span>/<span id="duelRoundTotal">8</span>
         </div>
-
+        <div class="duelTimerRing" id="duelTimer">10</div>
 
         <!-- Kim yutayotganini ko'rsatuvchi "yo'l" -->
         <div class="duelProgressTrack">
@@ -339,7 +385,7 @@
             <span id="duelAName"></span>
           </div>
           <div class="duelPlayerScore">
-            ✅ <span id="duelACorrect">0</span>&nbsp;&nbsp;❌ <span id="duelAWrong">0</span>&nbsp;&nbsp;⏱ <span id="duelATimer">10</span>
+            ✅ <span id="duelACorrect">0</span>&nbsp;&nbsp;❌ <span id="duelAWrong">0</span>
           </div>
         </div>
         <div class="duelQText" id="duelAQText"></div>

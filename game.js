@@ -409,6 +409,77 @@ async function deleteParticipantById(id) {
   renderParticipants();
 }
 
+async function resetParticipantStats(id) {
+
+  const p =
+    findParticipant(id);
+
+  if (!p) return;
+
+  participants =
+    participants.map(x => {
+
+      if (
+        String(x.id) !==
+        String(p.id)
+      ) {
+        return x;
+      }
+
+      return {
+        ...x,
+        games: 0,
+        wins: 0
+      };
+
+    });
+
+  await saveParticipants();
+
+  renderParticipants();
+}
+
+window.resetParticipantStats =
+  resetParticipantStats;
+
+async function resetAllParticipantsStats() {
+
+  if (!participants.length) {
+    alert(
+      "Hozircha ishtirokchi yo‘q."
+    );
+    return;
+  }
+
+  if (
+    !confirm(
+      "Barcha ishtirokchilarning statistikasi (o‘yin/g‘alaba soni) 0 ga tushirilsinmi? Bu amalni orqaga qaytarib bo‘lmaydi!"
+    )
+  ) {
+    return;
+  }
+
+  participants =
+    participants.map(
+      x => ({
+        ...x,
+        games: 0,
+        wins: 0
+      })
+    );
+
+  await saveParticipants();
+
+  renderParticipants();
+
+  alert(
+    "✅ Barcha ishtirokchilar statistikasi tozalandi!"
+  );
+}
+
+window.resetAllParticipantsStats =
+  resetAllParticipantsStats;
+
 function resizeImageFile(
   file,
   maxSize = 180,
@@ -664,6 +735,14 @@ const sorted = [...participants].sort((a, b) => {
         </button>
 
         <button
+          class="resetParticipantStats"
+          type="button"
+          title="Statistikani 0 ga tushirish"
+        >
+          🔄
+        </button>
+
+        <button
           class="deleteParticipant"
           type="button"
           title="O‘chirish"
@@ -691,6 +770,7 @@ div.addEventListener("click", (e) => {
   if (
     e.target.closest(".editParticipant") ||
     e.target.closest(".mergeParticipant") ||
+    e.target.closest(".resetParticipantStats") ||
     e.target.closest(".deleteParticipant")
   ) {
     return;
@@ -813,6 +893,29 @@ div.addEventListener("click", (e) => {
           target.trim()
         );
       }
+    };
+
+
+    /*
+      STATISTIKANI 0 GA TUSHURISH
+    */
+    div.querySelector(
+      ".resetParticipantStats"
+    ).onclick = async e => {
+
+      e.stopPropagation();
+
+      if (
+        !confirm(
+          `"${p.name}" ning statistikasi (o‘yin/g‘alaba soni) 0 ga tushirilsinmi?`
+        )
+      ) {
+        return;
+      }
+
+      await resetParticipantStats(
+        p.id
+      );
     };
 
 
@@ -5434,6 +5537,267 @@ window.closeAccountModal =
         "none";
     }
   };
+
+/* =========================================================
+   O'QITUVCHI QULFI (TEACHER LOCK)
+   O'quvchilar mavzu/ishtirokchini bilmasdan
+   o'chirib yubormasligi uchun — boshqaruv
+   funksiyalari PIN kod bilan qulflanadi.
+========================================================= */
+
+let teacherUnlocked = false;
+
+function getTeacherPinKey() {
+  return (
+    "teacherPin_" +
+    (currentUserUid || "guest")
+  );
+}
+
+function getTeacherPin() {
+  return localStorage.getItem(
+    getTeacherPinKey()
+  );
+}
+
+function setTeacherPin(pin) {
+  localStorage.setItem(
+    getTeacherPinKey(),
+    pin
+  );
+}
+
+function applyLockUI() {
+
+  document.body.classList.toggle(
+    "teacherLocked",
+    !teacherUnlocked
+  );
+
+  const btn =
+    $("teacherLockBtn");
+
+  if (btn) {
+    btn.textContent =
+      teacherUnlocked
+        ? "🔓"
+        : "🔒";
+
+    btn.title =
+      teacherUnlocked
+        ? "Boshqaruv ochiq — qulflash uchun bosing"
+        : "Boshqaruv qulflangan — ochish uchun bosing";
+  }
+}
+
+function openTeacherLockModal() {
+
+  /*
+   * Allaqachon ochiq bo'lsa —
+   * PIN so'ralmasdan darhol
+   * qayta qulflanadi.
+   */
+  if (teacherUnlocked) {
+    teacherUnlocked = false;
+    applyLockUI();
+    return;
+  }
+
+  const hasPin =
+    !!getTeacherPin();
+
+  const title =
+    $("teacherLockTitle");
+
+  const hint =
+    $("teacherLockHint");
+
+  const input =
+    $("teacherLockPinInput");
+
+  const submitBtn =
+    $("teacherLockSubmitBtn");
+
+  if (title) {
+    title.textContent =
+      hasPin
+        ? "Boshqaruvni ochish"
+        : "PIN kod o‘rnating";
+  }
+
+  if (hint) {
+    hint.textContent =
+      hasPin
+        ? "Boshqaruv funksiyalarini (mavzu/ishtirokchi o‘chirish, sozlamalar) ochish uchun PIN kodni kiriting."
+        : "Bu birinchi marta ishlatilyapti — o‘zingiz uchun PIN kod o‘rnating. Bu kod orqali keyinchalik boshqaruvni ochasiz.";
+  }
+
+  if (input) {
+    input.value = "";
+  }
+
+  if (submitBtn) {
+    submitBtn.textContent =
+      hasPin
+        ? "Ochish"
+        : "O‘rnatish";
+  }
+
+  const modal =
+    $("teacherLockModal");
+
+  if (modal) {
+    modal.style.display =
+      "flex";
+  }
+
+  setTimeout(
+    () =>
+      input?.focus(),
+    50
+  );
+}
+
+function closeTeacherLockModal() {
+
+  const modal =
+    $("teacherLockModal");
+
+  if (modal) {
+    modal.style.display =
+      "none";
+  }
+}
+
+window.closeTeacherLockModal =
+  closeTeacherLockModal;
+
+function submitTeacherLockPin() {
+
+  const input =
+    $("teacherLockPinInput");
+
+  const pin =
+    (input?.value || "").trim();
+
+  if (!pin) {
+    alert(
+      "PIN kodni kiriting!"
+    );
+    return;
+  }
+
+  const hasPin =
+    !!getTeacherPin();
+
+  if (!hasPin) {
+
+    if (pin.length < 4) {
+      alert(
+        "PIN kod kamida 4 ta belgidan iborat bo‘lsin!"
+      );
+      return;
+    }
+
+    setTeacherPin(pin);
+
+    teacherUnlocked = true;
+
+    applyLockUI();
+
+    closeTeacherLockModal();
+
+    alert(
+      "✅ PIN kod o‘rnatildi va boshqaruv ochildi. Bu kodni eslab qoling — Profil bo‘limidan o‘zgartirishingiz mumkin!"
+    );
+
+    return;
+  }
+
+  if (pin === getTeacherPin()) {
+
+    teacherUnlocked = true;
+
+    applyLockUI();
+
+    closeTeacherLockModal();
+
+  } else {
+
+    alert(
+      "❌ PIN kod noto‘g‘ri!"
+    );
+
+  }
+}
+
+$("teacherLockBtn")?.addEventListener(
+  "click",
+  () => {
+    openTeacherLockModal();
+  }
+);
+
+$("teacherLockSubmitBtn")?.addEventListener(
+  "click",
+  () => {
+    submitTeacherLockPin();
+  }
+);
+
+$("teacherLockPinInput")?.addEventListener(
+  "keydown",
+  e => {
+    if (e.key === "Enter") {
+      submitTeacherLockPin();
+    }
+  }
+);
+
+$("savePinBtn")?.addEventListener(
+  "click",
+  () => {
+
+    const input =
+      $("teacherPinInput");
+
+    const pin =
+      (input?.value || "").trim();
+
+    if (!pin) {
+      alert(
+        "Yangi PIN kodni kiriting!"
+      );
+      return;
+    }
+
+    if (pin.length < 4) {
+      alert(
+        "PIN kod kamida 4 ta belgidan iborat bo‘lsin!"
+      );
+      return;
+    }
+
+    setTeacherPin(pin);
+
+    if (input) {
+      input.value = "";
+    }
+
+    alert(
+      "✅ Yangi PIN kod saqlandi!"
+    );
+
+  }
+);
+
+/*
+ * Boshlang'ich holat — sahifa
+ * har ochilganda XAVFSIZLIK
+ * uchun avtomatik QULFLANGAN
+ * holatda boshlanadi.
+ */
+applyLockUI();
 
 $("introPlayBtn")?.addEventListener(
   "click",
