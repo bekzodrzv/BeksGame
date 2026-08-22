@@ -957,9 +957,13 @@ select option{background:#101c31;color:#fff}
   font-size:21px;
 }
 
+.accountBox{
+  width:min(440px,92vw);
+}
+
 .accountBox label{
   display:block;
-  margin:20px 0 6px;
+  margin:18px 0 6px;
   color:var(--muted);
   text-align:left;
   font-size:11px;
@@ -967,6 +971,18 @@ select option{background:#101c31;color:#fff}
 }
 
 .accountBox input{width:100%}
+
+.accountSectionDivider{
+  margin:22px 0 4px;
+  padding-top:16px;
+  border-top:1px solid rgba(255,255,255,.09);
+  color:#67e8f9;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  text-align:left;
+}
 
 .modalActions,.questionActions{
   display:flex;
@@ -4181,6 +4197,42 @@ select option{background:#101c31;color:#fff}
   margin-top:14px;
 }
 
+.guestBanner{
+  display:none;
+  margin:0 0 -4px;
+  padding:12px 16px;
+  border-radius:14px;
+  border:1px solid rgba(255,180,84,.35);
+  background:rgba(255,180,84,.08);
+  color:#ffd9a0;
+  font-size:12.5px;
+  line-height:1.5;
+}
+
+.guestBanner a{
+  color:#67e8f9;
+  font-weight:800;
+  text-decoration:underline;
+}
+
+body.guestMode #teacherLockBtn{
+  display:none !important;
+}
+
+body.guestMode .accountSectionDivider,
+body.guestMode #currentPasswordInput,
+body.guestMode #newPasswordInput,
+body.guestMode #newPasswordConfirmInput,
+body.guestMode #changePasswordBtn,
+body.guestMode label[for="currentPasswordInput"],
+body.guestMode label[for="newPasswordInput"],
+body.guestMode label[for="newPasswordConfirmInput"],
+body.guestMode label[for="teacherPinInput"],
+body.guestMode #teacherPinInput,
+body.guestMode #savePinBtn{
+  display:none !important;
+}
+
 body.teacherLocked .controlDockWide,
 body.teacherLocked .topicBoardCardActions,
 body.teacherLocked .editParticipant,
@@ -4192,9 +4244,17 @@ body.teacherLocked .resetAllStatsBtn{
 
 .resetAllStatsBtn{
   width:100%;
-  margin-top:6px;
+  margin-top:0;
   color:#ffb454;
   border-color:rgba(255,180,84,.3);
+}
+
+.panelHeadActions{
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:6px;
+  flex:0 0 auto;
 }
 
 /*

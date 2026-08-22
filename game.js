@@ -1,5 +1,5 @@
 import { auth, db } from "./firebase.js";
-import { signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { signOut, onAuthStateChanged, updateProfile, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { doc, setDoc, updateDoc, getDoc, getDocs, collection, writeBatch, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 /* =========================================================
@@ -11,6 +11,7 @@ import { doc, setDoc, updateDoc, getDoc, getDocs, collection, writeBatch, delete
 
 let questions = [[], [], [], [], []];
 let currentUserUid = null;
+let isGuestUser = false;
 let currentCell = null;
 let currentValue = 0;
 let teamCount = 0;
@@ -727,14 +728,6 @@ const sorted = [...participants].sort((a, b) => {
         </button>
 
         <button
-          class="mergeParticipant"
-          type="button"
-          title="Birlashtirish"
-        >
-          🔗
-        </button>
-
-        <button
           class="resetParticipantStats"
           type="button"
           title="Statistikani 0 ga tushirish"
@@ -769,7 +762,6 @@ div.addEventListener("click", (e) => {
      tugmalari bosilganda participant tanlanmasin */
   if (
     e.target.closest(".editParticipant") ||
-    e.target.closest(".mergeParticipant") ||
     e.target.closest(".resetParticipantStats") ||
     e.target.closest(".deleteParticipant")
   ) {
@@ -869,30 +861,6 @@ div.addEventListener("click", (e) => {
       window.editParticipant(
         p.id
       );
-    };
-
-
-    /*
-      MERGE
-    */
-    div.querySelector(
-      ".mergeParticipant"
-    ).onclick = async e => {
-
-      e.stopPropagation();
-
-      const target =
-        prompt(
-          `"${p.name}" ni qaysi ism bilan birlashtirasiz?`
-        );
-
-      if (target) {
-
-        await mergeParticipants(
-          p.name,
-          target.trim()
-        );
-      }
     };
 
 
@@ -5322,6 +5290,106 @@ async function loadOtherTopics() {
   }
 }
 
+/*
+ * ===============================================
+ * MEHMON (GUEST) REJIMI — ro'yxatdan o'tmagan
+ * foydalanuvchi uchun, ulashilgan mavzulardan
+ * tasodifiy 20 ta savoldan iborat BITTA namuna
+ * o'yin maydoni yasab beramiz. Mehmon shu bilan
+ * o'ynab ko'radi, lekin o'z mavzusini qo'sha
+ * olmaydi / boshqa imkoniyatlardan foydalana
+ * olmaydi — buning uchun ro'yxatdan o'tishi kerak.
+ * ===============================================
+ */
+function buildGuestDemoTopic() {
+
+  const pool = [];
+
+  otherTopics.forEach(
+    topic => {
+
+      const arr =
+        questionsObjectToArray(
+          topic.questions
+        );
+
+      arr.forEach(
+        col => {
+          (col || []).forEach(
+            item => {
+              if (item) {
+                pool.push(item);
+              }
+            }
+          );
+        }
+      );
+
+    }
+  );
+
+  const picked =
+    shuffleArray(
+      pool.slice()
+    ).slice(0, 20);
+
+  const columns = {
+    0: [],
+    1: [],
+    2: [],
+    3: [],
+    4: []
+  };
+
+  picked.forEach(
+    (item, i) => {
+      columns[i % 5].push(item);
+    }
+  );
+
+  return {
+    id: "guest-demo-topic",
+    title: "🎁 Mehmon uchun namuna",
+    questions: columns,
+    isGuestDemo: true
+  };
+}
+
+function setupGuestDemoTopic() {
+
+  const demoTopic =
+    buildGuestDemoTopic();
+
+  userTopics = [demoTopic];
+
+  selectUserTopic(
+    demoTopic.id
+  );
+
+  /*
+   * Mehmon uchun barcha
+   * boshqaruv/sozlash imkoniyatlarini
+   * "teacherLocked" mexanizmi orqali
+   * yashiramiz (mavzu qo'shish, Excel,
+   * ball, randomizer, statistikani
+   * tozalash va h.k.) — bu mexanizm
+   * allaqachon mavjud va sinovdan
+   * o'tgan.
+   */
+  document.body.classList.add(
+    "guestMode",
+    "teacherLocked"
+  );
+
+  const banner =
+    $("guestBanner");
+
+  if (banner) {
+    banner.style.display =
+      "block";
+  }
+}
+
 function renderOtherTopics(
   filterText = ""
 ) {
@@ -5791,6 +5859,95 @@ $("savePinBtn")?.addEventListener(
   }
 );
 
+$("changePasswordBtn")?.addEventListener(
+  "click",
+  async () => {
+
+    if (
+      !auth.currentUser ||
+      !auth.currentUser.email ||
+      currentUserUid === "guest_offline"
+    ) {
+      alert(
+        "Mehmon (offline) rejimida parolni o‘zgartirib bo‘lmaydi. " +
+        "Bu funksiyadan foydalanish uchun ro‘yxatdan o‘ting."
+      );
+      return;
+    }
+
+    const currentPassword =
+      ($("currentPasswordInput")?.value || "").trim();
+
+    const newPassword =
+      ($("newPasswordInput")?.value || "").trim();
+
+    const newPasswordConfirm =
+      ($("newPasswordConfirmInput")?.value || "").trim();
+
+    if (!currentPassword || !newPassword || !newPasswordConfirm) {
+      alert(
+        "Barcha parol maydonlarini to‘ldiring!"
+      );
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      alert(
+        "Yangi parol kamida 6 ta belgidan iborat bo‘lsin!"
+      );
+      return;
+    }
+
+    if (newPassword !== newPasswordConfirm) {
+      alert(
+        "Yangi parol va tasdiqlash mos emas!"
+      );
+      return;
+    }
+
+    try {
+
+      const credential =
+        EmailAuthProvider.credential(
+          auth.currentUser.email,
+          currentPassword
+        );
+
+      await reauthenticateWithCredential(
+        auth.currentUser,
+        credential
+      );
+
+      await updatePassword(
+        auth.currentUser,
+        newPassword
+      );
+
+      $("currentPasswordInput").value = "";
+      $("newPasswordInput").value = "";
+      $("newPasswordConfirmInput").value = "";
+
+      alert(
+        "✅ Parol muvaffaqiyatli yangilandi!"
+      );
+
+    } catch (e) {
+
+      console.error(e);
+
+      if (e.code === "auth/wrong-password" || e.code === "auth/invalid-credential") {
+        alert("Joriy parol noto‘g‘ri!");
+      } else if (e.code === "auth/too-many-requests") {
+        alert("Juda ko‘p urinish. Birozdan so‘ng qayta urinib ko‘ring.");
+      } else {
+        alert("Xato: " + (e.message || e));
+      }
+
+    }
+
+  }
+);
+
 /*
  * Boshlang'ich holat — sahifa
  * har ochilganda XAVFSIZLIK
@@ -5893,6 +6050,9 @@ onAuthStateChanged(
     currentUserUid =
       user.uid;
 
+    isGuestUser =
+      !!user.isAnonymous;
+
     localStorage.setItem(
       "uid",
       currentUserUid
@@ -5902,28 +6062,42 @@ onAuthStateChanged(
 
     await loadGameHistorySafe();
 
-    await loadTopicsSafe();
+    if (isGuestUser) {
 
-    initSettings();
+      initSettings();
 
-    restoreLastTopic();
+      await loadOtherTopics();
 
-    renderBoard();
+      setupGuestDemoTopic();
 
-    renderTeams();
+      renderTeams();
 
-    await loadOtherTopics();
+    } else {
 
-    /*
-     * Eski usulda saqlangan
-     * mavzularni ("users" hujjati
-     * ichida) yangi, tez ishlaydigan
-     * "sharedTopics" kolleksiyasiga
-     * fonda ko'chirib qo'yamiz —
-     * UI'ni kutdirmaslik uchun
-     * await qilinmaydi.
-     */
-    syncSharedTopics();
+      await loadTopicsSafe();
+
+      initSettings();
+
+      restoreLastTopic();
+
+      renderBoard();
+
+      renderTeams();
+
+      await loadOtherTopics();
+
+      /*
+       * Eski usulda saqlangan
+       * mavzularni ("users" hujjati
+       * ichida) yangi, tez ishlaydigan
+       * "sharedTopics" kolleksiyasiga
+       * fonda ko'chirib qo'yamiz —
+       * UI'ni kutdirmaslik uchun
+       * await qilinmaydi.
+       */
+      syncSharedTopics();
+
+    }
   }
 );
 

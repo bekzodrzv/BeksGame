@@ -15,7 +15,7 @@
   <header class="appHeader">
     <div class="brand">
       <div class="brandMark">
-        <img src="fastlogo.png" alt="Fast Education">
+        <img src="logo.svg" alt="Beks Game">
       </div>
       <div class="brandText">
         <div class="brand-main">Beks Game</div>
@@ -46,7 +46,22 @@
       <label for="displayNameInput">Ism</label>
       <input type="text" id="displayNameInput" placeholder="Ismingiz">
 
-      <label for="teacherPinInput" class="teacherPinLabel">🔒 Boshqaruv PIN kodi (o‘quvchilarga aytmang)</label>
+      <div class="accountSectionDivider">🔑 Parolni o‘zgartirish</div>
+
+      <label for="currentPasswordInput">Joriy parol</label>
+      <input type="password" id="currentPasswordInput" placeholder="Joriy parolingiz" autocomplete="current-password">
+
+      <label for="newPasswordInput">Yangi parol</label>
+      <input type="password" id="newPasswordInput" placeholder="Yangi parol (kamida 6 ta belgi)" autocomplete="new-password">
+
+      <label for="newPasswordConfirmInput">Yangi parolni tasdiqlash</label>
+      <input type="password" id="newPasswordConfirmInput" placeholder="Yangi parolni qayta kiriting" autocomplete="new-password">
+
+      <button class="bigBtn secondaryBtn wideBtn" id="changePasswordBtn" type="button">Parolni yangilash</button>
+
+      <div class="accountSectionDivider">🔒 Boshqaruv PIN kodi</div>
+
+      <label for="teacherPinInput">PIN kod (o‘quvchilarga aytmang)</label>
       <input type="password" id="teacherPinInput" inputmode="numeric" maxlength="8" placeholder="Yangi PIN kod (kamida 4 ta belgi)">
       <button class="bigBtn secondaryBtn wideBtn" id="savePinBtn" type="button">PIN kodni saqlash</button>
 
@@ -132,6 +147,12 @@
         <span>O‘yin maydoni</span>
       </div>
     </section>
+
+    <div class="guestBanner" id="guestBanner">
+      🎁 Siz <b>mehmon</b> sifatida o‘ynayapsiz — 20 ta tasodifiy savol bilan sinab ko‘ring.
+      O‘z mavzularingizni qo‘shish, ishtirokchi statistikasi va boshqa imkoniyatlar uchun
+      <a href="index.html">ro‘yxatdan o‘ting</a>.
+    </div>
 
     <!-- QUESTION BOARD + LIVE PARTICIPANTS -->
     <section class="gameStage">
@@ -221,12 +242,14 @@
             <span class="eyebrow">LIVE LEADERBOARD</span>
             <h3>Ishtirokchilar</h3>
           </div>
-          <button class="bigBtn primaryBtn wideBtn" onclick="addParticipant()">
-            🧑 Ishtirokchi qo‘shish
-          </button>
-          <button class="smallBtn resetAllStatsBtn" onclick="resetAllParticipantsStats()" title="Barcha ishtirokchilar statistikasini 0 ga tushirish">
-            🔄 Statistikani tozalash
-          </button>
+          <div class="panelHeadActions">
+            <button class="bigBtn primaryBtn wideBtn" onclick="addParticipant()">
+              🧑 Ishtirokchi qo‘shish
+            </button>
+            <button class="smallBtn resetAllStatsBtn" onclick="resetAllParticipantsStats()" title="Barcha ishtirokchilar statistikasini 0 ga tushirish">
+              🔄 Statistikani tozalash
+            </button>
+          </div>
         </div>
         <div id="participantsBox" class="participantsBox"></div>
       </aside>
@@ -236,37 +259,6 @@
     <audio id="bonusSound" src="bonus.mp3" preload="auto"></audio>
     <audio id="clickSound" src="click.mp3.wav"></audio>
     <audio id="winnerSound" src="cheer.mp3.wav"></audio>
-
-     <!-- =========================
-         TOPIC LIBRARY
-    ========================== -->
-    <section class="panel topicLibrary">
-
-      <div class="panelHead topicMainHead">
-        <div>
-          <span class="eyebrow">QUESTION LIBRARY</span>
-          <h2>Mavzular</h2>
-          <p class="panelDescription">Boshqa foydalanuvchilar ulashgan mavzuni tanlang.</p>
-        </div>
-      </div>
-
-      <!-- OTHER TOPICS -->
-      <div class="topicBlock">
-        <div class="topicBlockHead">
-          <div>
-            <h3>🌐 Boshqa foydalanuvchilar mavzulari</h3>
-            <span>Ulashilgan mavzular</span>
-          </div>
-
-          <div class="otherTopicSearch">
-            <input type="text" id="otherTopicSearchInput" placeholder="Mavzu nomi bo‘yicha qidirish...">
-          </div>
-        </div>
-
-        <div id="otherTopicPanel"></div>
-      </div>
-
-    </section>
 
    
 

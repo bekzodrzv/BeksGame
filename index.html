@@ -8,29 +8,41 @@
 </head>
 <body>
 
-  <h1>Beks Game</h1>
+  <div class="authWrap">
 
-  <!-- LOGIN FORM (default ochiq) -->
-  <div id="loginForm" style="display:block; max-width:400px; margin:auto;">
-    <h2>Kirish</h2>
-    <input type="email" id="loginEmail" placeholder="Email" required><br><br>
-    <input type="password" id="loginPassword" placeholder="Parol" required><br><br>
-    <button onclick="loginUser()">Kirish</button>
-    <button onclick="loginOffline()" style="margin-top:10px;">
-  🌐 Offline (Mehmon)
-</button>
-    <p>Yoki <span id="showRegister" style="color:blue;cursor:pointer;">Ro‘yxatdan o‘tish</span></p>
-  </div>
+    <div class="authLogo">
+      <div class="authLogoMark"><img src="logo.svg" alt="Beks Game"></div>
+      <div class="authLogoText">Beks Game</div>
+      <div class="authLogoSub">Top <span class="brand-f">F</span>ast Education</div>
+    </div>
 
-  <!-- REGISTER FORM (default yopiq) -->
-  <div id="registerForm" style="display:none; max-width:400px; margin:auto;">
-    <h2>Ro‘yxatdan o‘tish</h2>
-    <input type="text" id="registerName" placeholder="Ism" required><br><br>
-    <input type="email" id="registerEmail" placeholder="Email" required><br><br>
-    <input type="password" id="registerPassword" placeholder="Parol" required><br><br>
-    <input type="password" id="registerPasswordConfirm" placeholder="Parolni tasdiqlash" required><br><br>
-    <button onclick="registerUser()">Ro‘yxatdan o‘tish</button>
-    <p>Yoki <span id="showLogin" style="color:blue;cursor:pointer;">Kirish</span></p>
+    <!-- LOGIN FORM (default ochiq) -->
+    <div id="loginForm" style="display:block;">
+      <h2>Kirish</h2>
+      <label for="loginEmail">Email</label>
+      <input type="email" id="loginEmail" placeholder="Email" required>
+      <label for="loginPassword">Parol</label>
+      <input type="password" id="loginPassword" placeholder="Parol" required>
+      <button onclick="loginUser()">Kirish</button>
+      <button class="guestBtn" onclick="loginOffline()">🌐 Offline (Mehmon)</button>
+      <p class="formToggle">Yoki <span id="showRegister">Ro‘yxatdan o‘tish</span></p>
+    </div>
+
+    <!-- REGISTER FORM (default yopiq) -->
+    <div id="registerForm" style="display:none;">
+      <h2>Ro‘yxatdan o‘tish</h2>
+      <label for="registerName">Ism</label>
+      <input type="text" id="registerName" placeholder="Ism" required>
+      <label for="registerEmail">Email</label>
+      <input type="email" id="registerEmail" placeholder="Email" required>
+      <label for="registerPassword">Parol</label>
+      <input type="password" id="registerPassword" placeholder="Parol" required>
+      <label for="registerPasswordConfirm">Parolni tasdiqlash</label>
+      <input type="password" id="registerPasswordConfirm" placeholder="Parolni tasdiqlash" required>
+      <button onclick="registerUser()">Ro‘yxatdan o‘tish</button>
+      <p class="formToggle">Yoki <span id="showLogin">Kirish</span></p>
+    </div>
+
   </div>
 
   <script type="module">
@@ -41,7 +53,8 @@
     updateProfile,
     setPersistence,
     browserLocalPersistence,
-    onAuthStateChanged
+    onAuthStateChanged,
+    signInAnonymously
   } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
   // =========================
@@ -132,9 +145,29 @@
   // =========================
   // 🔹 OFFLINE (GUEST) MODE
   // =========================
-  window.loginOffline = () => {
-    localStorage.setItem("uid", "guest_offline");
-    window.location.href = "game.html";
+  window.loginOffline = async () => {
+    try {
+      await signInAnonymously(auth);
+      window.location.href = "game.html";
+    } catch (e) {
+      console.error(e);
+
+      if (
+        e.code === "auth/admin-restricted-operation" ||
+        e.code === "auth/operation-not-allowed"
+      ) {
+        alert(
+          "Mehmon rejimi hozircha yoqilmagan (Firebase konsolida " +
+          "\"Anonymous\" kirish usuli o‘chiq). Administrator buni " +
+          "Firebase Console → Authentication → Sign-in method → " +
+          "Anonymous bo‘limidan yoqishi kerak."
+        );
+      } else if (e.code === "auth/network-request-failed") {
+        alert("❌ Internet yo‘q! Qayta urinib ko‘ring.");
+      } else {
+        alert("Xato: " + e.message);
+      }
+    }
   };
 
   // =========================

@@ -1,88 +1,203 @@
-/* =====================
-   LOGIN & REGISTER FORMS
-===================== */
-h1 {
-    text-align: center;      /* gorizontal markaz */
-    margin: 0 0 30px 0;      /* tepada va pastda bo‘sh joy */
-    padding: 0;              /* kerak bo‘lsa */
-    font-size: 42px;         /* o‘lchamini xohlashga qarab o‘zgartir */
+/* ==========================================================
+   BEKS GAME — LOGIN / REGISTER
+   game.css bilan bir xil "dark glass" uslub
+========================================================== */
+
+:root{
+  --bg:#07111f;
+  --bg2:#0b1930;
+  --panel:rgba(14,27,48,.78);
+  --line:rgba(255,255,255,.12);
+  --line2:rgba(255,255,255,.18);
+  --text:#f7f9fc;
+  --muted:#9eacc0;
+  --cyan:#20d9ff;
+  --purple:#8c5cff;
+  --shadow:0 18px 50px rgba(0,0,0,.28);
 }
 
+*{box-sizing:border-box}
+
+html,body{
+  min-height:100%;
+}
+
+body{
+  margin:0;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  color:var(--text);
+  font-family:Inter,"Segoe UI",Arial,sans-serif;
+  background:
+    radial-gradient(circle at 10% 5%,rgba(32,217,255,.13),transparent 25%),
+    radial-gradient(circle at 90% 8%,rgba(140,92,255,.16),transparent 27%),
+    linear-gradient(135deg,var(--bg),var(--bg2));
+}
+
+.authWrap{
+  width:min(420px,100%);
+}
+
+/* ---------- LOGO ---------- */
+
+.authLogo{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+  margin-bottom:26px;
+  text-align:center;
+}
+
+.authLogoMark{
+  width:64px;
+  height:64px;
+  border-radius:18px;
+  overflow:hidden;
+  display:grid;
+  place-items:center;
+  box-shadow:0 12px 30px rgba(32,217,255,.35);
+}
+
+.authLogoMark img{
+  width:100%;
+  height:100%;
+  display:block;
+}
+
+.authLogoText{
+  font-size:26px;
+  font-weight:950;
+  letter-spacing:-.3px;
+}
+
+.authLogoSub{
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+
+.authLogoSub .brand-f{
+  color:var(--cyan);
+}
+
+/* ---------- CARD ---------- */
+
 #loginForm, #registerForm {
-  max-width: 400px;
-  margin: 50px auto;
-  padding: 30px 25px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-  font-family: Arial, sans-serif;
-  text-align: center;
+  width:100%;
+  margin:0;
+  padding:28px 26px;
+  border-radius:22px;
+  border:1px solid var(--line2);
+  background:
+    radial-gradient(circle at 50% 0,rgba(32,217,255,.09),transparent 40%),
+    var(--panel);
+  backdrop-filter:blur(16px);
+  box-shadow:var(--shadow);
+  text-align:center;
 }
 
 #loginForm h2, #registerForm h2 {
-  margin-bottom: 20px;
-  font-size: 28px;
-  color: #111;
-  /* 🟢 Chekka chiqmasligi va markazlash uchun */
-    text-align: center;   /* gorizontal markaz */
-    display: block;
-    width: 100%;
+  margin:0 0 22px;
+  font-size:21px;
+  font-weight:900;
+  color:var(--text);
+  text-align:center;
 }
 
+#loginForm label, #registerForm label{
+  display:block;
+  margin:14px 0 6px;
+  color:var(--muted);
+  text-align:left;
+  font-size:11px;
+  font-weight:800;
+}
 
 #loginForm input, #registerForm input {
-  width: 100%;
-  padding: 12px 15px;
-  margin: 10px 0;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-size: 16px;
-  outline: none;
-  transition: all 0.2s;
-  box-sizing: border-box;
+  width:100%;
+  padding:12px 14px;
+  margin:0;
+  border:1px solid var(--line2);
+  border-radius:11px;
+  background:rgba(255,255,255,.06);
+  color:var(--text);
+  font-size:14px;
+  outline:none;
+  transition:.2s;
+}
+
+#loginForm input::placeholder, #registerForm input::placeholder{
+  color:#5c6c82;
 }
 
 #loginForm input:focus, #registerForm input:focus {
-  border-color: #4f46e5;
-  box-shadow: 0 0 5px rgba(79, 70, 229, 0.5);
+  border-color:rgba(32,217,255,.5);
+  background:rgba(32,217,255,.07);
+  box-shadow:0 0 0 3px rgba(32,217,255,.14);
 }
 
 #loginForm button, #registerForm button {
-  width: 100%;
-  padding: 12px;
-  margin-top: 15px;
-  font-size: 18px;
-  font-weight: 600;
-  border-radius: 10px;
-  border: none;
-  cursor: pointer;
-  color: white;
-  background: linear-gradient(135deg, #4f46e5, #8b5cf6);
-  transition: all 0.3s;
+  width:100%;
+  min-height:46px;
+  padding:12px;
+  margin-top:16px;
+  font-size:14.5px;
+  font-weight:850;
+  border-radius:12px;
+  border:none;
+  cursor:pointer;
+  color:#04121f;
+  background:linear-gradient(135deg,#20d9ff,#4f8cff 60%,#8c5cff);
+  box-shadow:0 9px 22px rgba(79,140,255,.28);
+  transition:.2s;
 }
 
 #loginForm button:hover, #registerForm button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(79,70,229,0.5);
+  transform:translateY(-2px);
+  box-shadow:0 13px 28px rgba(79,140,255,.4);
+}
+
+/* Guest / offline button — ikkinchi darajali ko'rinish */
+#loginForm button.guestBtn{
+  color:var(--text);
+  background:rgba(255,255,255,.07);
+  border:1px solid var(--line2);
+  box-shadow:none;
+}
+
+#loginForm button.guestBtn:hover{
+  border-color:rgba(32,217,255,.38);
+  background:rgba(32,217,255,.10);
+  box-shadow:none;
+  transform:none;
 }
 
 /* Toggle links */
 .formToggle {
-  margin-top: 15px;
-  font-size: 14px;
-  color: #555;
-  cursor: pointer;
+  margin-top:16px;
+  font-size:13px;
+  color:var(--muted);
 }
 
-.formToggle:hover {
-  color: #4f46e5;
-  text-decoration: underline;
+.formToggle span, #showRegister, #showLogin{
+  color:var(--cyan);
+  cursor:pointer;
+  font-weight:800;
+}
+
+.formToggle span:hover, #showRegister:hover, #showLogin:hover{
+  text-decoration:underline;
 }
 
 /* Error messages */
 .formError {
-  color: #dc3545;
-  font-size: 14px;
-  margin-top: 8px;
+  color:#ff8a95;
+  font-size:13px;
+  margin-top:10px;
 }
