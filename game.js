@@ -132,6 +132,18 @@ function getUserDocRef() {
   return currentUserUid && db ? doc(db, "users", currentUserUid) : null;
 }
 
+function getParticipantsDocRef() {
+  return currentUserUid && db
+    ? doc(db, "participants", currentUserUid)
+    : null;
+}
+
+function getTopicsDocRef() {
+  return currentUserUid && db
+    ? doc(db, "userTopics", currentUserUid)
+    : null;
+}
+
 function normalizeParticipant(participant) {
   return {
     id: participant.id ?? "p_" + Date.now() + Math.random(),
@@ -239,7 +251,7 @@ async function saveParticipants() {
     JSON.stringify(participants)
   );
 
-  const ref = getUserDocRef();
+  const ref = getParticipantsDocRef();
 
   if (!ref) return;
 
@@ -273,16 +285,32 @@ async function loadParticipants() {
 
   renderParticipants();
 
-  const ref = getUserDocRef();
+  const ref = getParticipantsDocRef();
 
   if (!ref) return;
 
   try {
     const snap = await getDoc(ref);
 
-    const remote = snap.exists()
+    let remote = snap.exists()
       ? snap.data().participants
       : null;
+
+    if (!Array.isArray(remote)) {
+      const legacyRef = getUserDocRef();
+      const legacySnap = legacyRef
+        ? await getDoc(legacyRef)
+        : null;
+      remote = legacySnap?.exists()
+        ? legacySnap.data().participants
+        : null;
+    }
+
+    const loadedFromLegacy = !Array.isArray(
+      snap.exists()
+        ? snap.data().participants
+        : null
+    ) && Array.isArray(remote);
 
     if (Array.isArray(remote)) {
       participants = mergeParticipantStats(
@@ -296,6 +324,10 @@ async function loadParticipants() {
       );
 
       renderParticipants();
+
+      if (loadedFromLegacy) {
+        await saveParticipants();
+      }
     }
   } catch (e) {
     console.warn("loadParticipants:", e);
@@ -1250,7 +1282,7 @@ async function saveTopics() {
     JSON.stringify(userTopics)
   );
 
-  const ref = getUserDocRef();
+  const ref = getTopicsDocRef();
 
   if (!ref || !navigator.onLine) {
     console.warn(
@@ -1312,8 +1344,7 @@ async function loadTopicsSafe() {
 
   renderUserTopics();
 
-  const ref =
-    getUserDocRef();
+  const ref = getTopicsDocRef();
 
   if (!ref) return;
 
@@ -1321,10 +1352,20 @@ async function loadTopicsSafe() {
     const snap =
       await getDoc(ref);
 
-    const remote =
+    let remote =
       snap.exists()
         ? snap.data().topics
         : null;
+
+    if (!Array.isArray(remote)) {
+      const legacyRef = getUserDocRef();
+      const legacySnap = legacyRef
+        ? await getDoc(legacyRef)
+        : null;
+      remote = legacySnap?.exists()
+        ? legacySnap.data().topics
+        : null;
+    }
 
     if (Array.isArray(remote)) {
       userTopics =
@@ -1336,6 +1377,10 @@ async function loadTopicsSafe() {
       );
 
       renderUserTopics();
+
+      if (ref && !snap.exists()) {
+        await saveTopics();
+      }
     }
   } catch (e) {
     console.warn(
