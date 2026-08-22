@@ -183,23 +183,39 @@ async function migrateLocalDataToFirebase() {
   const participantsRef = getParticipantsDocRef();
   const topicsRef = getTopicsDocRef();
 
-  try {
-    const [participantsSnap, topicsSnap, legacySnap] = await Promise.all([
-      getDoc(participantsRef),
-      getDoc(topicsRef),
-      getDoc(getUserDocRef())
-    ]);
+  let participantsSnap = null;
+  let topicsSnap = null;
+  let legacySnap = null;
 
-    const remoteParticipants = participantsSnap.exists()
+  try {
+    participantsSnap = await getDoc(participantsRef);
+  } catch (error) {
+    console.warn("Participants document read:", error);
+  }
+
+  try {
+    topicsSnap = await getDoc(topicsRef);
+  } catch (error) {
+    console.warn("Topics document read:", error);
+  }
+
+  try {
+    legacySnap = await getDoc(getUserDocRef());
+  } catch (error) {
+    console.warn("Legacy user document read:", error);
+  }
+
+  try {
+    const remoteParticipants = participantsSnap?.exists()
       ? participantsSnap.data().participants
-      : legacySnap.data()?.participants;
+      : legacySnap?.data()?.participants;
 
     const mergedParticipants = mergeParticipantStats(
       participantLists.flat(),
       Array.isArray(remoteParticipants) ? remoteParticipants : []
     );
 
-    if (mergedParticipants.length) {
+    if (mergedParticipants.length && participantsRef) {
       await setDoc(
         participantsRef,
         { participants: mergedParticipants },
@@ -211,9 +227,9 @@ async function migrateLocalDataToFirebase() {
       );
     }
 
-    const remoteTopics = topicsSnap.exists()
+    const remoteTopics = topicsSnap?.exists()
       ? topicsSnap.data().topics
-      : legacySnap.data()?.topics;
+      : legacySnap?.data()?.topics;
     const topicsById = new Map();
 
     (Array.isArray(remoteTopics) ? remoteTopics : []).forEach(topic => {
@@ -236,7 +252,7 @@ async function migrateLocalDataToFirebase() {
       questions: normalizeTopicQuestionsForStorage(topic.questions)
     }));
 
-    if (mergedTopics.length) {
+    if (mergedTopics.length && topicsRef) {
       await setDoc(
         topicsRef,
         { topics: mergedTopics },
@@ -371,6 +387,20 @@ async function saveParticipants() {
     );
   } catch (e) {
     console.warn("Participant Firebase save:", e);
+
+    const legacyRef = getUserDocRef();
+
+    if (legacyRef) {
+      try {
+        await setDoc(
+          legacyRef,
+          { participants },
+          { merge: true }
+        );
+      } catch (legacyError) {
+        console.warn("Legacy participant Firebase save:", legacyError);
+      }
+    }
   }
 }
 
@@ -438,7 +468,32 @@ async function loadParticipants() {
       }
     }
   } catch (e) {
-    console.warn("loadParticipants:", e);
+    console.warn("loadParticipants dedicated read:", e);
+
+    const legacyRef = getUserDocRef();
+
+    if (legacyRef) {
+      try {
+        const legacySnap = await getDoc(legacyRef);
+        const remote = legacySnap.exists()
+          ? legacySnap.data().participants
+          : null;
+
+        if (Array.isArray(remote)) {
+          participants = mergeParticipantStats(
+            participants,
+            remote
+          );
+          localStorage.setItem(
+            PARTICIPANTS_KEY(),
+            JSON.stringify(participants)
+          );
+          renderParticipants();
+        }
+      } catch (legacyError) {
+        console.warn("loadParticipants legacy read:", legacyError);
+      }
+    }
   }
 }
 
@@ -1399,16 +1454,16 @@ async function saveTopics() {
     return false;
   }
 
-  try {
-    const safeTopics = JSON.parse(
-      JSON.stringify(userTopics)
-    ).map(topic => ({
-      ...topic,
-      questions: normalizeTopicQuestionsForStorage(
-        topic.questions
-      )
-    }));
+  const safeTopics = JSON.parse(
+    JSON.stringify(userTopics)
+  ).map(topic => ({
+    ...topic,
+    questions: normalizeTopicQuestionsForStorage(
+      topic.questions
+    )
+  }));
 
+  try {
     await setDoc(
       ref,
       { topics: safeTopics },
@@ -1420,6 +1475,24 @@ async function saveTopics() {
       "saveTopics Firebase xatosi:",
       e
     );
+
+    const legacyRef = getUserDocRef();
+
+    if (legacyRef) {
+      try {
+        await setDoc(
+          legacyRef,
+          { topics: safeTopics },
+          { merge: true }
+        );
+        return true;
+      } catch (legacyError) {
+        console.error(
+          "Legacy topics Firebase xatosi:",
+          legacyError
+        );
+      }
+    }
 
     alert(
       "DIQQAT: savollar Firebase'ga saqlanmadi!\n\n" +
